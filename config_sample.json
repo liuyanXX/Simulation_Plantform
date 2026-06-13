@@ -1,0 +1,67 @@
+{
+  "simulation_name": "项目仿真任务",
+  "start_time": "2024-01-01T09:00:00",
+  "organizations": [
+    {
+      "org_id": "ORG001",
+      "name": "研发部",
+      "parent_org_id": null,
+      "workers": [
+        {
+          "employee_id": "EMP001",
+          "name": "张三",
+          "department": "研发部",
+          "roles": ["DEV", "TEST"],
+          "daily_work_hours": 8.0,
+          "initial_tasks": []
+        },
+        {
+          "employee_id": "EMP002",
+          "name": "李四",
+          "department": "研发部",
+          "roles": ["TEST", "QA"],
+          "daily_work_hours": 8.0,
+          "initial_tasks": []
+        }
+      ]
+    },
+    {
+      "org_id": "ORG002",
+      "name": "项目管理部门",
+      "parent_org_id": null,
+      "workers": [
+        {
+          "employee_id": "EMP003",
+          "name": "王五",
+          "department": "项目管理部门",
+          "roles": ["PM", "PMA"],
+          "daily_work_hours": 8.0,
+          "initial_tasks": []
+        },
+        {
+          "employee_id": "EMP004",
+          "name": "赵六",
+          "department": "项目管理部门",
+          "roles": ["PF"],
+          "daily_work_hours": 8.0,
+          "initial_tasks": []
+        }
+      ]
+    },
+    {
+      "org_id": "ORG003",
+      "name": "测试部",
+      "parent_org_id": "ORG001",
+      "workers": [
+        {
+          "employee_id": "EMP005",
+          "name": "钱七",
+          "department": "测试部",
+          "roles": ["TEST", "QA"],
+          "daily_work_hours": 8.0,
+          "initial_tasks": []
+        }
+      ]
+    }
+  ]
+}
