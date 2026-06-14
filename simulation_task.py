@@ -449,6 +449,7 @@ if __name__ == "__main__":
     now = datetime.now()
     task = Task(
         task_id="T001",
+        task_name="测试任务",
         expected_start_time=now,
         expected_end_time=now,
         content="测试任务",
