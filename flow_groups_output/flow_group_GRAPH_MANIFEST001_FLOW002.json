@@ -1,0 +1,93 @@
+{
+  "flow_id": "GRAPH_MANIFEST001_FLOW002",
+  "flow_name": "项目发布流程清单_图谱_路径2",
+  "tasks": [
+    {
+      "task_id": "START002",
+      "task_name": "流程开始",
+      "expected_start_time": "2026-06-15T09:00:00",
+      "expected_end_time": "2026-06-15T09:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "流程开始节点",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "DEV",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": null,
+      "task_destinations": [
+        "T003"
+      ],
+      "task_type": "start"
+    },
+    {
+      "task_id": "T003",
+      "task_name": "开发用户注册模块",
+      "expected_start_time": "2026-06-15T09:00:00",
+      "expected_end_time": "2026-06-15T14:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "开发用户注册功能，包括邮箱验证、密码加密",
+      "execute_role": "DEV",
+      "resource_consumption": 5.0,
+      "priority": "high",
+      "output_target_role": "TEST",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "START002",
+      "task_destinations": [
+        "T004"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "T004",
+      "task_name": "测试用户注册模块",
+      "expected_start_time": "2026-06-15T14:00:00",
+      "expected_end_time": "2026-06-15T16:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "进行单元测试、集成测试和安全测试",
+      "execute_role": "TEST",
+      "resource_consumption": 2.0,
+      "priority": "high",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T003",
+      "task_destinations": [
+        "END002"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "END002",
+      "task_name": "流程结束",
+      "expected_start_time": "2026-06-15T16:00:00",
+      "expected_end_time": "2026-06-15T16:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "用户注册模块开发流程正常结束",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T004",
+      "task_destinations": [],
+      "task_type": "end"
+    }
+  ],
+  "description": "从任务图谱 GRAPH_MANIFEST001 提取的第 2 条路径"
+}

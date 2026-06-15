@@ -1,0 +1,137 @@
+{
+  "flow_id": "GRAPH_MANIFEST001_FLOW003",
+  "flow_name": "项目发布流程清单_图谱_路径3",
+  "tasks": [
+    {
+      "task_id": "START003",
+      "task_name": "流程开始",
+      "expected_start_time": "2026-06-16T09:00:00",
+      "expected_end_time": "2026-06-16T09:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "流程开始节点",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "OPS",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": null,
+      "task_destinations": [
+        "T005"
+      ],
+      "task_type": "start"
+    },
+    {
+      "task_id": "T005",
+      "task_name": "代码打包",
+      "expected_start_time": "2026-06-16T09:00:00",
+      "expected_end_time": "2026-06-16T10:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "打包应用代码为Docker镜像",
+      "execute_role": "OPS",
+      "resource_consumption": 1.0,
+      "priority": "high",
+      "output_target_role": "OPS",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "START003",
+      "task_destinations": [
+        "T006"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "T006",
+      "task_name": "部署到测试环境",
+      "expected_start_time": "2026-06-16T10:00:00",
+      "expected_end_time": "2026-06-16T11:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "将应用部署到测试环境进行验证",
+      "execute_role": "OPS",
+      "resource_consumption": 1.0,
+      "priority": "high",
+      "output_target_role": "TEST",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T005",
+      "task_destinations": [
+        "T007"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "T007",
+      "task_name": "验收测试",
+      "expected_start_time": "2026-06-16T11:00:00",
+      "expected_end_time": "2026-06-16T14:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "进行最终验收测试",
+      "execute_role": "TEST",
+      "resource_consumption": 3.0,
+      "priority": "high",
+      "output_target_role": "OPS",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T006",
+      "task_destinations": [
+        "T008"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "T008",
+      "task_name": "部署到生产环境",
+      "expected_start_time": "2026-06-16T14:00:00",
+      "expected_end_time": "2026-06-16T15:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "将应用部署到生产环境",
+      "execute_role": "OPS",
+      "resource_consumption": 1.0,
+      "priority": "high",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T007",
+      "task_destinations": [
+        "END003"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "END003",
+      "task_name": "流程结束",
+      "expected_start_time": "2026-06-16T15:00:00",
+      "expected_end_time": "2026-06-16T15:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "部署流程结束",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T008",
+      "task_destinations": [],
+      "task_type": "end"
+    }
+  ],
+  "description": "从任务图谱 GRAPH_MANIFEST001 提取的第 3 条路径"
+}

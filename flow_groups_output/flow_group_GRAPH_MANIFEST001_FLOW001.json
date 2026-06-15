@@ -1,0 +1,93 @@
+{
+  "flow_id": "GRAPH_MANIFEST001_FLOW001",
+  "flow_name": "项目发布流程清单_图谱_路径1",
+  "tasks": [
+    {
+      "task_id": "START001",
+      "task_name": "流程开始",
+      "expected_start_time": "2026-06-15T09:00:00",
+      "expected_end_time": "2026-06-15T09:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "流程开始节点",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "DEV",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": null,
+      "task_destinations": [
+        "T001"
+      ],
+      "task_type": "start"
+    },
+    {
+      "task_id": "T001",
+      "task_name": "开发用户登录模块",
+      "expected_start_time": "2026-06-15T09:00:00",
+      "expected_end_time": "2026-06-15T13:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "开发用户登录功能，包括用户名密码验证、JWT令牌生成",
+      "execute_role": "DEV",
+      "resource_consumption": 4.0,
+      "priority": "high",
+      "output_target_role": "TEST",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "START001",
+      "task_destinations": [
+        "T002"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "T002",
+      "task_name": "测试用户登录模块",
+      "expected_start_time": "2026-06-15T13:00:00",
+      "expected_end_time": "2026-06-15T15:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "进行单元测试和集成测试",
+      "execute_role": "TEST",
+      "resource_consumption": 2.0,
+      "priority": "high",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T001",
+      "task_destinations": [
+        "END001"
+      ],
+      "task_type": "normal"
+    },
+    {
+      "task_id": "END001",
+      "task_name": "流程结束",
+      "expected_start_time": "2026-06-15T15:00:00",
+      "expected_end_time": "2026-06-15T15:00:00",
+      "scheduled_start_time": null,
+      "scheduled_end_time": null,
+      "actual_start_time": null,
+      "actual_end_time": null,
+      "content": "用户登录模块开发流程结束",
+      "execute_role": "SYSTEM",
+      "resource_consumption": 0.0,
+      "priority": "low",
+      "output_target_role": "",
+      "next_task_info": null,
+      "is_completed": false,
+      "task_source": "T002",
+      "task_destinations": [],
+      "task_type": "end"
+    }
+  ],
+  "description": "从任务图谱 GRAPH_MANIFEST001 提取的第 1 条路径"
+}
