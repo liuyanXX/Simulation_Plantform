@@ -1,0 +1,351 @@
+========================================
+Task 任务类重构修改记录
+========================================
+
+修改日期：2026年06月14日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 新增属性 - task_name
+   - 类型：str
+   - 默认值：无（必填）
+   - 用途：记录人类可读的任务名称信息
+   - 说明：用于在界面展示或日志输出时提供更友好的任务标识
+
+2. 新增属性 - task_source
+   - 类型：Optional[str]
+   - 默认值：None
+   - 用途：记录触发本任务的上一任务节点的信息
+   - 说明：存储上一任务的task_id，用于追踪任务流转链路
+
+3. 新增属性 - task_destinations
+   - 类型：List[str]
+   - 默认值：[]
+   - 用途：记录本任务执行完成后可能被触发的所有任务
+   - 说明：存储所有可能的下一任务task_id列表，实际触发时从中选择一个
+
+4. 新增方法 - update_task(**kwargs)
+   - 功能：动态修改任务对象的属性
+   - 参数：关键字参数，支持任意已定义字段
+   - 异常：当传入未定义属性时抛出ValueError
+   - 说明：提供统一的任务属性修改接口，便于动态更新任务信息
+
+5. 更新字段说明 - output_target_role
+   - 修改前：输出物目标角色
+   - 修改后：输出物目标角色（实际触发的下一任务的执行角色）
+   - 说明：明确该字段存储的是从task_destinations中选中的任务的execute_role
+
+6. 新增枚举 - TaskType
+   - 成员：NORMAL, START, END, HALT
+   - 用途：标识任务类型，便于流程控制和状态判断
+
+7. 新增属性 - task_type
+   - 类型：TaskType
+   - 默认值：TaskType.NORMAL
+   - 用途：记录任务类型
+
+8. 新增子类 - StartTask
+   - 父类：Task
+   - 特点：任务流的起点任务
+   - 约束：task_source 必须为 None
+   - 自动设置：task_type = TaskType.START
+
+9. 新增子类 - EndTask
+   - 父类：Task
+   - 特点：任务流的正常终点任务
+   - 约束：task_destinations 必须为空，next_task_info 必须为 None，output_target_role 必须为空字符串
+   - 自动设置：task_type = TaskType.END
+
+10. 新增子类 - HaltTask
+    - 父类：Task
+    - 特点：任务流的异常中断点任务
+    - 约束：task_destinations 必须为空，next_task_info 必须为 None，output_target_role 必须为空字符串
+    - 自动设置：task_type = TaskType.HALT
+
+11. 新增类 - TaskFlowGroup
+    - 用途：任务流组类，管理一组串行执行的任务
+    - 属性：
+      - flow_id: 任务流唯一标识
+      - flow_name: 任务流名称（人类可读）
+      - tasks: 任务列表，按执行顺序排列
+      - description: 任务流描述
+    - 约束规则：
+      - 必须有且仅有一个开始任务（StartTask），且必须在列表首位
+      - 必须有且仅有一个终点任务（EndTask或HaltTask），且必须在列表末位
+      - 不能从StartTask直接到EndTask或HaltTask，中间必须至少有一个普通任务
+      - 普通任务的下一任务可以是普通Task、EndTask或HaltTask
+      - 任务之间自动通过task_source和task_destinations建立关联
+    - 方法：
+      - add_task(): 添加任务到任务流
+      - remove_task(): 从任务流中移除任务
+      - update_task(): 修改任务流中的指定任务
+      - get_task(): 获取指定任务
+      - get_start_task(): 获取开始任务
+      - get_end_task(): 获取终点任务
+      - get_normal_tasks(): 获取所有普通任务
+      - get_flow_length(): 获取任务流长度
+      - is_valid(): 检查任务流是否有效
+      - to_json(): 导出任务流为JSON格式
+      - get_flow_summary(): 获取任务流摘要信息
+
+12. 新增类 - TaskGraph
+    - 用途：任务图谱类，表示一个有向图结构的任务图谱
+    - 属性：
+      - graph_id: 图谱唯一标识
+      - graph_name: 图谱名称（人类可读）
+      - tasks: 任务节点列表
+      - description: 图谱描述
+    - 图谱约束规则：
+      - 图中可以有多个开始任务（StartTask）
+      - 图中可以有多个终点任务（EndTask或HaltTask）
+      - 路径的起点必须是StartTask，终点必须是EndTask或HaltTask
+      - 普通任务可以有多个来源和多个去向（支持分支和汇聚）
+      - 任务之间通过task_source和task_destinations建立有向边
+    - 方法：
+      - get_task_map(): 获取任务ID到任务对象的映射
+      - get_start_tasks(): 获取所有开始任务
+      - get_end_tasks(): 获取所有终点任务
+      - get_normal_tasks(): 获取所有普通任务
+      - extract_all_paths(): 提取所有从StartTask到EndTask或HaltTask的路径
+      - split_into_flow_groups(): 将图谱拆分为多个任务流组（核心功能）
+      - get_path_summary(): 获取所有路径的摘要信息
+      - is_connected(): 检查图谱是否连通
+      - find_paths_between(): 查找两个任务之间的所有路径
+      - add_task(): 添加任务到图谱
+      - remove_task(): 从图谱中移除任务
+      - update_task(): 修改图谱中的指定任务
+      - get_graph_summary(): 获取图谱摘要信息
+      - to_json(): 导出图谱为JSON格式
+
+========================================
+二、修改理由
+========================================
+
+1. task_name 属性：
+   - 原有的task_id是机器可读的唯一标识，不便于人类阅读和理解
+   - 需要一个人类可读的名称来提升日志和界面的可读性
+
+2. task_source 属性：
+   - 原有设计缺乏任务溯源能力，无法追踪任务的触发来源
+   - 增加该属性后可以构建完整的任务执行链路图，便于流程分析和问题排查
+
+3. task_destinations 属性：
+   - 原有设计只支持单一的next_task_info，无法表达分支流程
+   - 增加该属性后支持一个任务触发多个可能的后续任务，实现灵活的流程编排
+   - 配合output_target_role可以明确实际触发的路径
+
+4. update_task 方法：
+   - 原有设计没有提供统一的属性修改接口
+   - 直接使用setattr不够安全，缺乏属性校验
+   - 提供统一方法可以集中处理属性校验和修改逻辑，提高代码健壮性
+
+5. output_target_role 字段说明更新：
+   - 原说明不够明确，容易与task_destinations混淆
+   - 更新说明后明确了该字段与task_destinations的关系：
+     - task_destinations：所有可能的下一任务ID列表
+     - output_target_role：实际选中的任务的执行角色
+     - next_task_info：实际选中的任务详细信息
+
+6. TaskType 枚举和 task_type 属性：
+   - 需要一种机制来区分任务的类型
+   - 便于流程引擎识别和处理不同类型的任务节点
+
+7. StartTask/EndTask/HaltTask 子类：
+   - 需要明确标识任务流的起点、终点和异常中断点
+   - 通过子类约束确保流程语义的正确性
+   - 提供清晰的类型区分，便于业务逻辑处理
+
+8. TaskFlowGroup 类：
+   - 需要一个容器来管理一组串行执行的任务
+   - 提供任务流的完整性验证和自动链接建立
+   - 支持任务的动态添加、移除和修改
+   - 便于流程的整体管理和维护
+
+9. TaskGraph 类：
+   - 需要一个有向图结构来表示复杂的任务流程，支持分支和汇聚
+   - 提供路径分析能力，能够自动提取所有可能的执行路径
+   - 支持将图谱拆分为多个任务流组，便于独立执行和管理
+   - 提供图谱完整性验证和连通性检查，确保流程设计的正确性
+
+========================================
+三、兼容性说明
+========================================
+
+1. 新增属性均设置了合理的默认值，不会影响现有代码
+2. 原有字段和方法保持不变
+3. update_task方法为新增功能，不影响现有调用方式
+4. 需要确保现有创建Task对象的代码补充task_name参数
+5. 新增子类完全兼容Task类型，可以在任何接受Task的地方使用
+6. TaskFlowGroup类为新增功能，不影响现有代码
+7. TaskGraph类为新增功能，不影响现有代码
+
+========================================
+四、使用示例
+========================================
+
+# 创建普通任务
+task = Task(
+    task_id="T001",
+    task_name="用户登录模块开发",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now() + timedelta(hours=4),
+    content="开发用户登录功能模块",
+    execute_role="DEV",
+    resource_consumption=4.0,
+    priority="high",
+    output_target_role="TEST",
+    task_source="T000",
+    task_destinations=["T002", "T003"]
+)
+
+# 修改任务属性
+task.update_task(
+    content="更新后的任务内容",
+    priority="medium",
+    resource_consumption=3.0
+)
+
+# 获取任务JSON表示
+print(task.to_json())
+
+# 创建开始任务
+start_task = StartTask(
+    task_id="START001",
+    task_name="流程开始",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now(),
+    content="流程开始节点",
+    execute_role="SYSTEM",
+    resource_consumption=0.0,
+    priority="low",
+    output_target_role="DEV",
+    task_destinations=["T001", "T002"]
+)
+
+# 创建结束任务
+end_task = EndTask(
+    task_id="END001",
+    task_name="流程结束",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now(),
+    content="流程结束节点",
+    execute_role="SYSTEM",
+    resource_consumption=0.0,
+    priority="low",
+    output_target_role="",
+    task_source="T003"
+)
+
+# 创建中断任务
+halt_task = HaltTask(
+    task_id="HALT001",
+    task_name="流程中断",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now(),
+    content="流程异常中断节点",
+    execute_role="SYSTEM",
+    resource_consumption=0.0,
+    priority="high",
+    output_target_role="",
+    task_source="T002"
+)
+
+# 创建任务流
+flow = TaskFlowGroup(
+    flow_id="FLOW001",
+    flow_name="用户登录流程",
+    tasks=[
+        start_task,
+        task,
+        end_task
+    ],
+    description="用户登录功能的完整业务流程"
+)
+
+# 添加任务到任务流
+new_task = Task(
+    task_id="T004",
+    task_name="代码审查",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now() + timedelta(hours=1),
+    content="代码审查",
+    execute_role="QA",
+    resource_consumption=1.0,
+    priority="medium",
+    output_target_role=""
+)
+flow.add_task(new_task)
+
+# 修改任务流中的任务
+flow.update_task("T001", resource_consumption=5.0)
+
+# 获取任务流摘要
+print(flow.get_flow_summary())
+
+# 导出任务流为JSON
+print(flow.to_json())
+
+# 创建任务图谱（包含分支逻辑）
+task1 = Task(
+    task_id="T001",
+    task_name="开发模块A",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now() + timedelta(hours=4),
+    content="开发模块A功能",
+    execute_role="DEV",
+    resource_consumption=4.0,
+    priority="high",
+    output_target_role="TEST",
+    task_source="START001",
+    task_destinations=["T003"]
+)
+
+task2 = Task(
+    task_id="T002",
+    task_name="开发模块B",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now() + timedelta(hours=3),
+    content="开发模块B功能",
+    execute_role="DEV",
+    resource_consumption=3.0,
+    priority="high",
+    output_target_role="TEST",
+    task_source="START001",
+    task_destinations=["T003"]
+)
+
+task3 = Task(
+    task_id="T003",
+    task_name="集成测试",
+    expected_start_time=datetime.now(),
+    expected_end_time=datetime.now() + timedelta(hours=2),
+    content="集成测试",
+    execute_role="TEST",
+    resource_consumption=2.0,
+    priority="high",
+    output_target_role="",
+    task_destinations=["END001", "HALT001"]
+)
+
+graph = TaskGraph(
+    graph_id="GRAPH001",
+    graph_name="软件开发流程",
+    tasks=[start_task, task1, task2, task3, end_task, halt_task],
+    description="包含分支逻辑的软件开发业务流程"
+)
+
+# 提取所有路径
+paths = graph.extract_all_paths()
+for path in paths:
+    print(" -> ".join(path))
+
+# 将图谱拆分为任务流组
+flow_groups = graph.split_into_flow_groups()
+for flow_group in flow_groups:
+    print(f"任务流: {flow_group.flow_name}, 任务数: {flow_group.get_flow_length()}")
+
+# 获取图谱摘要
+print(graph.get_graph_summary())
