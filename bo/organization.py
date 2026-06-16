@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
-from .ai_worker import AIWorker
-from .task import Task
 
 
 class Organization(BaseModel):
@@ -231,6 +229,12 @@ class OrganizationFactory:
             root.add_child(child_org)
         
         return root
+
+
+# 延迟导入避免循环依赖，然后更新类型提示引用
+from .ai_worker import AIWorker
+from .task import Task
+Organization.update_forward_refs()
 
 
 if __name__ == "__main__":

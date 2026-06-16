@@ -7,9 +7,6 @@ from typing import Optional, List, Dict, Any
 import json
 from datetime import datetime
 
-# 延迟导入避免循环依赖
-from .task_flow_group import TaskFlowGroup
-
 
 class TaskManifest(BaseModel):
     """
@@ -191,5 +188,6 @@ class TaskManifest(BaseModel):
         return f"TaskManifest(manifest_id={self.manifest_id}, manifest_name={self.manifest_name}, flow_groups={len(self.flow_groups)}个)"
 
 
-# 更新类型提示引用
+# 延迟导入避免循环依赖，然后更新类型提示引用
+from .task_flow_group import TaskFlowGroup
 TaskManifest.update_forward_refs()

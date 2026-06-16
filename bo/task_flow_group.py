@@ -6,9 +6,6 @@ from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any
 import json
 
-# 循环引用需要延迟导入
-from .task import Task, StartTask, EndTask, HaltTask
-
 
 class TaskFlowGroup(BaseModel):
     """
@@ -294,5 +291,6 @@ class TaskFlowGroup(BaseModel):
         return cls(**data)
 
 
-# 更新类型提示引用
-TaskFlowGroup.model_rebuild()
+# 延迟导入避免循环依赖，然后更新类型提示引用
+from .task import Task, StartTask, EndTask, HaltTask
+TaskFlowGroup.update_forward_refs()

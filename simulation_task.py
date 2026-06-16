@@ -13,6 +13,7 @@ import sys
 import signal
 import threading
 from enum import Enum
+import os
 
 from organization import Organization
 from ai_worker import AIWorker
@@ -89,8 +90,13 @@ class SimulationEngine:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
+        # 使用绝对路径，基于脚本所在目录
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(base_dir, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        
         file_handler = logging.FileHandler(
-            'logs/simulation_engine.log', mode='w', encoding='utf-8'
+            os.path.join(log_dir, 'simulation_engine.log'), mode='w', encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)

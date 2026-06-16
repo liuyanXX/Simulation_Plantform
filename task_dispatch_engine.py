@@ -69,8 +69,13 @@ class TaskDispatchEngine:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
+        # 使用绝对路径，基于脚本所在目录
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(base_dir, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        
         file_handler = logging.FileHandler(
-            'logs/task_dispatch_engine.log', mode='w', encoding='utf-8'
+            os.path.join(log_dir, 'task_dispatch_engine.log'), mode='w', encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)
@@ -309,6 +314,13 @@ class TaskDispatchEngine:
         dispatched_flow_groups = []
         total_start_tasks = 0
         
+        # 为所有员工设置任务流组信息
+        if self._process_engine:
+            self._process_engine.set_task_flow_groups_for_all_workers(flow_groups)
+            self._logger.info(
+                f"已将 {len(flow_groups)} 个任务流组信息传递给所有员工"
+            )
+        
         for flow_group in flow_groups:
             start_tasks = self.extract_start_tasks(flow_group)
             dispatched_count = self.dispatch_start_tasks_to_starter(
@@ -375,6 +387,13 @@ class TaskDispatchEngine:
         flow_groups = self.split_manifest_to_flow_groups(manifest)
         dispatched_flow_groups = []
         total_start_tasks = 0
+        
+        # 为所有员工设置任务流组信息
+        if self._process_engine:
+            self._process_engine.set_task_flow_groups_for_all_workers(flow_groups)
+            self._logger.info(
+                f"已将 {len(flow_groups)} 个任务流组信息传递给所有员工"
+            )
         
         for flow_group in flow_groups:
             start_tasks = self.extract_start_tasks(flow_group)

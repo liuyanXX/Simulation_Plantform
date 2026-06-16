@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 import threading
-from .task import Task, Priority
+import os
 
 
 def setup_logging():
@@ -23,7 +23,12 @@ def setup_logging():
     
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    file_handler = logging.FileHandler('logs/ai_worker.log', mode='w', encoding='utf-8')
+    # 使用绝对路径，基于脚本所在目录
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    log_dir = os.path.join(base_dir, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    file_handler = logging.FileHandler(os.path.join(log_dir, 'ai_worker.log'), mode='w', encoding='utf-8')
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
     
@@ -75,6 +80,7 @@ class AIWorker(BaseModel):
     _wake_event: threading.Event = PrivateAttr(default_factory=threading.Event)
     _working_thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _check_interval: float = PrivateAttr(default=2.0)
+    _task_flow_groups: List['TaskFlowGroup'] = PrivateAttr(default_factory=list)
 
     @field_validator('daily_work_hours')
     @classmethod
@@ -107,6 +113,47 @@ class AIWorker(BaseModel):
         
         if self._is_alive and self._is_sleeping:
             self.wake_up()
+    
+    def set_task_flow_groups(self, flow_groups: List['TaskFlowGroup']) -> None:
+        """
+        设置任务流组列表
+        
+        用于在任务分派时，将任务流组信息传递给员工，以便在执行任务时
+        能够根据 task_destinations 获取下一个任务。
+        
+        :param flow_groups: 任务流组列表
+        """
+        self._task_flow_groups = flow_groups
+        logger.info(f"员工{self.name}已设置 {len(flow_groups)} 个任务流组")
+    
+    def _find_next_task(self, current_task: Task) -> Optional[Task]:
+        """
+        根据当前任务的 task_destinations 在任务流组中查找下一个任务
+        
+        :param current_task: 当前执行的任务
+        :return: 下一个任务对象，如果不存在则返回 None
+        """
+        if not current_task.task_destinations:
+            logger.info(f"任务 {current_task.task_id} 没有后续任务（task_destinations 为空）")
+            return None
+        
+        # 遍历所有任务流组，查找下一个任务
+        for flow_group in self._task_flow_groups:
+            task_map = {task.task_id: task for task in flow_group.tasks}
+            
+            for dest_task_id in current_task.task_destinations:
+                if dest_task_id in task_map:
+                    next_task = task_map[dest_task_id]
+                    logger.info(
+                        f"找到后续任务: {dest_task_id} (执行角色: {next_task.execute_role})"
+                    )
+                    return next_task
+        
+        logger.warning(
+            f"在任务流组中未找到任务 {current_task.task_id} 的后续任务 "
+            f"(task_destinations: {current_task.task_destinations})"
+        )
+        return None
 
     def _get_priority_order(self, priority: Priority) -> int:
         """
@@ -185,7 +232,7 @@ class AIWorker(BaseModel):
         2. 设置任务实际开始时间
         3. 模拟任务执行（通过睡眠模拟工作时长，最长5秒）
         4. 设置任务实际结束时间和完成状态
-        5. 如果任务有后续任务信息且目标角色存在，将后续任务传递给目标员工
+        5. 根据 task_destinations 和 output_target_role 查找并传递下一个任务给目标员工
         
         :param task: 待执行的任务对象
         :param role_registry: 角色注册表，用于查找目标角色对应的员工
@@ -204,14 +251,54 @@ class AIWorker(BaseModel):
         logger.info(f"员工{self.name}完成任务: {task.task_id}")
         logger.info(f"任务执行信息:\n{task.to_json()}")
         
-        if task.output_target_role in role_registry:
-            target_worker = role_registry[task.output_target_role]
-            if task.next_task_info:
-                next_task = Task(**task.next_task_info)
-                target_worker.add_task(next_task)
-                logger.info(f"员工{self.name}已将后续任务传递给{target_worker.name}")
+        # 传递后续任务
+        self._dispatch_next_task(task, role_registry)
+    
+    def _dispatch_next_task(self, task: Task, role_registry: Dict[str, 'AIWorker']) -> None:
+        """
+        根据当前任务查找并传递下一个任务
+        
+        优先使用 next_task_info，如果不存在则根据 task_destinations
+        和 output_target_role 在任务流组中查找下一个任务。
+        
+        对于 EndTask 或 HaltTask 类型的任务，不再传递后续任务。
+        
+        :param task: 当前执行完成的任务
+        :param role_registry: 角色注册表，用于查找目标角色对应的员工
+        """
+        # 如果当前任务是终点任务，不再传递后续任务
+        from .task import TaskType
+        if hasattr(task, 'task_type') and task.task_type == TaskType.END:
+            logger.info(f"任务 {task.task_id} 是终点任务，流程结束")
+            return
+        
+        if hasattr(task, 'task_type') and task.task_type == TaskType.HALT:
+            logger.info(f"任务 {task.task_id} 是中断任务，流程终止")
+            return
+        
+        next_task = None
+        
+        # 优先使用 next_task_info
+        if task.next_task_info:
+            logger.info(f"使用 next_task_info 创建后续任务")
+            next_task = Task(**task.next_task_info)
         else:
-            logger.warning(f"目标角色{task.output_target_role}不存在于角色注册表中")
+            # 根据 task_destinations 和 output_target_role 查找下一个任务
+            next_task = self._find_next_task(task)
+        
+        if next_task:
+            target_role = next_task.execute_role
+            if target_role in role_registry:
+                target_worker = role_registry[target_role]
+                target_worker.add_task(next_task)
+                logger.info(
+                    f"员工{self.name}已将任务 {next_task.task_id} "
+                    f"传递给 {target_worker.name}（角色: {target_role}）"
+                )
+            else:
+                logger.warning(f"目标角色 {target_role} 不存在于角色注册表中，任务将不被执行")
+        else:
+            logger.info(f"任务 {task.task_id} 执行完成，无后续任务需要传递")
 
     def work(self, role_registry: Dict[str, 'AIWorker']) -> None:
         """
@@ -333,6 +420,12 @@ class AIWorker(BaseModel):
         :return: 包含员工工号、姓名、部门和角色的字符串
         """
         return f"AIWorker(工号={self.employee_id}, 姓名={self.name}, 部门={self.department}, 角色={self.roles})"
+
+
+# 延迟导入避免循环依赖，然后更新类型提示引用
+from .task import Task, Priority
+from .task_flow_group import TaskFlowGroup
+AIWorker.update_forward_refs()
 
 
 if __name__ == "__main__":

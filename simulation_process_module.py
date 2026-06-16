@@ -8,6 +8,7 @@ from datetime import datetime
 import logging
 import sys
 import threading
+import os
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -118,8 +119,13 @@ class SimulationProcessModule:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
+        # 使用绝对路径，基于脚本所在目录
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(base_dir, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        
         file_handler = logging.FileHandler(
-            'logs/simulation_process_module.log', mode='w', encoding='utf-8'
+            os.path.join(log_dir, 'simulation_process_module.log'), mode='w', encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)
@@ -486,7 +492,7 @@ if __name__ == "__main__":
         execute_role="TEST",
         resource_consumption=0.5,
         priority="high",
-        output_target_role="__END__",
+        output_target_role="",  # 测试完成后结束流程
         task_destinations=["END001"]
     )
     

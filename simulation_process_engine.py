@@ -11,11 +11,17 @@ import sys
 import threading
 import signal
 import time
+import os
 
 from bo.organization import Organization, OrganizationFactory
 from bo.ai_worker import AIWorker
 from bo.task import Task
 from worker_type_registry import WorkerTypeRegistry
+
+# 用于类型提示
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from bo.task_flow_group import TaskFlowGroup
 
 
 class SimulationProcessEngine:
@@ -59,8 +65,13 @@ class SimulationProcessEngine:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
+        # 使用绝对路径，基于脚本所在目录
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(base_dir, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        
         file_handler = logging.FileHandler(
-            'logs/simulation_process_engine.log', mode='w', encoding='utf-8'
+            os.path.join(log_dir, 'simulation_process_engine.log'), mode='w', encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)
@@ -194,6 +205,20 @@ class SimulationProcessEngine:
             f"创建启动员工: {start_worker_name} (ID: {start_worker_id}, "
             f"类型: AIWorker, 角色: ['__START__'])"
         )
+    
+    def set_task_flow_groups_for_all_workers(self, flow_groups: List['TaskFlowGroup']) -> None:
+        """
+        为所有员工设置任务流组信息
+        
+        确保每个员工在执行任务时都能根据 task_destinations 查找后续任务。
+        
+        :param flow_groups: 任务流组列表
+        """
+        for worker in self._workers.values():
+            worker.set_task_flow_groups(flow_groups)
+            self._logger.info(
+                f"已将任务流组信息传递给员工 {worker.name}"
+            )
     
     def assign_initial_tasks(self, tasks: List[Task]) -> None:
         """

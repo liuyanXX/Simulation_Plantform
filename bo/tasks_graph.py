@@ -6,9 +6,6 @@ from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any
 import json
 
-# 循环引用需要延迟导入
-from .task import Task, StartTask, EndTask, HaltTask
-
 
 class TasksGraph(BaseModel):
     """
@@ -386,5 +383,6 @@ class TasksGraph(BaseModel):
         return f"TasksGraph(graph_id={self.graph_id}, graph_name={self.graph_name}, tasks={len(self.tasks)}个, paths={len(self.extract_all_paths())}条)"
 
 
-# 更新类型提示引用
+# 延迟导入避免循环依赖，然后更新类型提示引用
+from .task import Task, StartTask, EndTask, HaltTask
 TasksGraph.update_forward_refs()
