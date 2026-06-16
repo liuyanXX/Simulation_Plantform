@@ -1,19 +1,19 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, ClassVar
 
 
 class Role(BaseModel):
     name: str = Field(description="角色名称")
     description: str = Field(description="角色描述")
 
-    PROJECT_MANAGER = "PM"
-    PROJECT_FINANCIAL = "PF"
-    PROJECT_PURCHASE = "PP"
-    PROJECT_RESEARCH = "PR"
-    PROJECT_MANAGER_ASSISTANT = "PMA"
-    PROJECT_DEVELOPER = "DEV"
-    PROJECT_TESTER = "TEST"
-    PROJECT_QA_ENGINEER = "QA"
+    PROJECT_MANAGER: ClassVar[str] = "PM"
+    PROJECT_FINANCIAL: ClassVar[str] = "PF"
+    PROJECT_PURCHASE: ClassVar[str] = "PP"
+    PROJECT_RESEARCH: ClassVar[str] = "PR"
+    PROJECT_MANAGER_ASSISTANT: ClassVar[str] = "PMA"
+    PROJECT_DEVELOPER: ClassVar[str] = "DEV"
+    PROJECT_TESTER: ClassVar[str] = "TEST"
+    PROJECT_QA_ENGINEER: ClassVar[str] = "QA"
 
 
 class RoleRegistry:

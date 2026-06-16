@@ -1,0 +1,58 @@
+{
+  "manifest_id": "TEST001",
+  "manifest_name": "测试任务清单",
+  "flow_groups": [
+    {
+      "flow_id": "FLOW001",
+      "flow_name": "测试流程1",
+      "tasks": [
+        {
+          "task_id": "START001",
+          "task_name": "开始",
+          "task_type": "start",
+          "expected_start_time": "2026-06-16T21:49:08.470850",
+          "expected_end_time": "2026-06-16T21:49:08.470871",
+          "content": "开始任务",
+          "task_source": null,
+          "execute_role": "__START__",
+          "resource_consumption": 0.0,
+          "priority": "low",
+          "output_target_role": "DEV",
+          "task_destinations": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T001",
+          "task_name": "开发任务",
+          "expected_start_time": "2026-06-16T21:49:08.470873",
+          "expected_end_time": "2026-06-16T21:49:08.470874",
+          "content": "开发模块",
+          "task_source": "START001",
+          "execute_role": "DEV",
+          "resource_consumption": 1.0,
+          "priority": "high",
+          "output_target_role": "__END__",
+          "task_destinations": [
+            "END001"
+          ]
+        },
+        {
+          "task_id": "END001",
+          "task_name": "结束",
+          "task_type": "end",
+          "expected_start_time": "2026-06-16T21:49:08.470875",
+          "expected_end_time": "2026-06-16T21:49:08.470876",
+          "content": "结束任务",
+          "task_source": "T001",
+          "execute_role": "__END__",
+          "resource_consumption": 0.0,
+          "priority": "low",
+          "output_target_role": "",
+          "task_destinations": []
+        }
+      ]
+    }
+  ],
+  "status": "draft"
+}

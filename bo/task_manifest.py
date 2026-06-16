@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 
 # 延迟导入避免循环依赖
-from task_flow_group import TaskFlowGroup
+from .task_flow_group import TaskFlowGroup
 
 
 class TaskManifest(BaseModel):

@@ -349,3 +349,380 @@ for flow_group in flow_groups:
 
 # 获取图谱摘要
 print(graph.get_graph_summary())
+
+
+---------------------------------------------------------------------------
+修改编号: MOD-004
+修改日期: 2026-06-16
+修改类型: 新增
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  新增智能员工类型注册表模块，文件路径：worker_type_registry.py
+
+设计思路:
+  1. 注册表模式:
+     - 使用单例模式实现类型注册表
+     - 提供注册、注销、获取类型的接口
+     - 确保只有AIWorker及其子类可以被注册
+
+  2. 核心功能:
+     - register(): 注册智能员工类型
+     - unregister(): 注销智能员工类型
+     - get(): 获取已注册的类型
+     - is_registered(): 检查类型是否已注册
+     - create_worker(): 根据类型名称创建员工实例
+
+  3. 安全验证:
+     - 验证注册的类必须是AIWorker的子类
+     - 防止重复注册相同类型名称
+     - 创建实例时验证类型已注册
+
+---------------------------------------------------------------------------
+修改编号: MOD-005
+修改日期: 2026-06-16
+修改类型: 重命名
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  将 simulation_task_engine.py 重命名为 simulation_process_engine.py
+  将 SimulationTaskEngine 类重命名为 SimulationProcessEngine
+
+文件变更:
+  - 原文件: simulation_task_engine.py
+  - 新文件: simulation_process_engine.py
+  - 日志文件: simulation_process_engine.log
+
+---------------------------------------------------------------------------
+修改编号: MOD-006
+修改日期: 2026-06-16
+修改类型: 新增
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  新增仿真流程引擎模块，文件路径：simulation_process_engine.py
+
+设计思路:
+  1. 核心功能:
+     - parse_organization_manifest(): 解析仿真组织清单文件
+     - initialize_workers(): 初始化智能员工，验证类型注册
+     - start(): 多线程启动所有员工进入working状态
+     - stop(): 停止所有员工工作线程
+     - run(): 完整运行仿真流程
+
+  2. 多线程设计:
+     - 每个智能员工占用一个独立线程
+     - 使用守护线程确保主线程退出时自动清理
+     - 使用锁保护共享状态
+
+  3. 类型验证:
+     - 初始化时检查员工类型是否在注册表中注册
+     - 未注册类型抛出异常
+
+  4. 角色注册表:
+     - 自动构建角色到员工的映射
+     - 支持按角色分配任务
+     - 处理角色冲突（同一角色多个员工）
+
+  5. 信号处理:
+     - 监听SIGINT和SIGTERM信号
+     - 优雅关闭仿真引擎
+
+  6. 状态管理:
+     - 提供仿真状态查询接口
+     - 监控每个员工的工作状态
+
+  7. 配置文件格式:
+     - 支持JSON格式的组织清单
+     - 使用OrganizationFactory解析组织配置
+
+  8. 工作流程:
+     1. 解析组织清单文件
+     2. 初始化智能员工（验证类型注册）
+     3. 构建角色注册表
+     4. 多线程启动所有员工进入working状态
+     5. 员工持续工作直到引擎停止或任务完成
+
+  9. 启动员工:
+     - 自动创建 __Start__AI_Worker 启动员工
+     - 用于接收所有的启动任务（StartTask）
+     - 特殊角色 '__START__'
+
+---------------------------------------------------------------------------
+修改编号: MOD-007
+修改日期: 2026-06-16
+修改类型: 新增
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  新增任务分派引擎模块，文件路径：task_dispatch_engine.py
+
+设计思路:
+  1. 核心功能:
+     - load_manifest(): 根据任务清单ID加载任务清单
+     - validate_manifest(): 对任务清单进行规范性检查
+     - split_manifest_to_flow_groups(): 将任务清单拆解为任务流组
+     - extract_start_tasks(): 从任务流组中提取起始任务
+     - dispatch_start_tasks_to_starter(): 将起始任务分派到启动员工
+     - dispatch_manifest(): 完整的分派流程
+
+  2. 规范性检查:
+     - 检查清单ID和名称是否有效
+     - 检查任务流组列表是否为空
+     - 检查每个任务流组是否包含必要的任务
+     - 检查是否有起始任务（StartTask）和终点任务（EndTask）
+     - 检查任务ID是否重复
+     - 检查任务之间的依赖关系
+
+  3. 任务分派流程:
+     1. 根据任务清单ID查找任务清单文件
+     2. 加载任务清单数据
+     3. 进行规范性检查
+     4. 将任务清单拆解为任务流组
+     5. 从每个任务流组中提取起始任务
+     6. 将所有起始任务插入到 __Start__AI_Worker 的任务清单中
+
+  4. 与仿真流程引擎的集成:
+     - 仿真流程引擎通过参数传入
+     - 直接访问引擎中的启动员工
+     - 将起始任务分派到启动员工的任务列表中
+
+  5. 缓存管理:
+     - 任务清单文件缓存
+     - 支持清除缓存操作
+
+  6. 日志记录:
+     - 详细的操作日志记录
+     - 任务分派过程的完整追踪
+     - 规范性检查结果的详细记录
+
+---------------------------------------------------------------------------
+修改编号: MOD-008
+修改日期: 2026-06-16
+修改类型: 优化
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  优化任务分派引擎，将 dispatch_manifest() 方法的参数从任务清单ID
+  改为任务清单对象，简化分派流程。
+
+变更说明:
+  - 原方法: dispatch_manifest(manifest_id: str)
+  - 新方法: dispatch_manifest(manifest: TaskManifest)
+  
+  优化效果:
+  - 移除了内部加载任务清单的逻辑
+  - 由调用者负责提供任务清单对象
+  - 提高了接口的灵活性和可测试性
+  - 减少了引擎内部的文件操作依赖
+
+  使用方式:
+    # 方式1: 从文件加载后分派
+    manifest = TaskManifest.load_from_file("manifest.json")
+    result = dispatch_engine.dispatch_manifest(manifest)
+    
+    # 方式2: 从内存数据创建后分派
+    manifest = TaskManifest(**manifest_data)
+    result = dispatch_engine.dispatch_manifest(manifest)
+
+===========================================================================
+修改编号: MOD-009
+修改日期: 2026-06-16
+修改类型: 新增
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  新增仿真任务模块，文件路径：simulation_process_module.py
+
+设计思路:
+  1. 核心功能:
+     - start(): 启动仿真任务模块
+     - stop(): 停止仿真任务模块
+     - dispatch_manifest(): 分派任务清单
+     - get_status(): 获取模块状态
+     - get_simulation_status(): 获取仿真状态
+
+  2. 引擎协调:
+     - 依次启动仿真流程引擎和任务分派引擎
+     - 将任务清单对象传递给任务分派引擎
+     - 将仿真组织清单对象传递给仿真流程引擎
+     - 将仿真流程引擎对象传递给任务分派引擎
+
+  3. 生命周期管理:
+     - 支持使用 with 语句自动管理生命周期
+     - 同步停止所有引擎
+     - 超时控制机制
+
+  4. 面向对象设计:
+     - 单一职责：专注于仿真任务的协调管理
+     - 封装性：隐藏引擎实现细节
+     - 可扩展性：易于添加新的引擎类型
+
+  5. 微服务设计:
+     - 模块独立运行
+     - 通过接口与其他组件交互
+     - 松耦合架构
+
+  6. Pydantic类:
+     - SimulationProcessModuleConfig: 模块配置类
+     - SimulationProcessModuleStatus: 模块状态类
+
+  7. 线程安全:
+     - 使用锁保护共享状态
+     - 独立线程运行仿真流程引擎
+
+  8. 日志记录:
+     - 详细的操作日志记录
+     - 模块生命周期追踪
+
+---------------------------------------------------------------------------
+修改编号: MOD-010
+修改日期: 2026-06-16
+修改类型: 重构
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  将业务对象文件迁移到 bo 文件夹，优化项目结构。
+
+变更说明:
+  1. 创建 bo 文件夹作为业务对象模块
+  2. 迁移以下文件到 bo 文件夹:
+     - ai_worker.py (智能员工类)
+     - task.py (任务类)
+     - task_flow_group.py (任务流组类)
+     - tasks_graph.py (任务图谱类)
+     - task_manifest.py (任务清单类)
+     - role.py (角色类)
+     - organization.py (组织类)
+  3. 创建 bo/__init__.py 导出所有业务对象
+  4. 更新所有文件的导入语句:
+     - bo 文件夹内使用相对导入 (.module)
+     - bo 文件夹外使用绝对导入 (bo.module)
+  5. 修复 role.py 中 Pydantic 类变量注解问题
+
+优化效果:
+  - 业务对象与引擎模块分离
+  - 提高代码可维护性
+  - 更清晰的项目结构
+
+---------------------------------------------------------------------------
+修改编号: MOD-011
+修改日期: 2026-06-16
+修改类型: 重构
+修改人: System
+---------------------------------------------------------------------------
+修改内容:
+  将所有日志文件迁移到 logs 文件夹，优化项目结构。
+
+变更说明:
+  1. 创建 logs 文件夹作为日志文件存储目录
+  2. 更新以下文件的日志路径配置:
+     - bo/ai_worker.py: logs/ai_worker.log
+     - simulation_process_engine.py: logs/simulation_process_engine.log
+     - task_dispatch_engine.py: logs/task_dispatch_engine.log
+     - simulation_process_module.py: logs/simulation_process_module.log
+     - simulation_task.py: logs/simulation_engine.log
+
+优化效果:
+  - 日志文件集中管理
+  - 项目根目录更整洁
+  - 便于日志文件的维护和清理
+
+===========================================================================
+                              版本说明
+===========================================================================
+
+版本 1.7 (2026-06-16):
+  - 创建 logs 文件夹
+  - 迁移所有日志文件到 logs 文件夹
+  - 更新日志文件路径配置
+
+版本 1.6 (2026-06-16):
+  - 重构项目结构，创建 bo 业务对象文件夹
+  - 迁移 7 个业务对象文件到 bo 文件夹
+  - 更新所有导入语句
+
+版本 1.5 (2026-06-16):
+  - 新增 simulation_process_module.py - 仿真任务模块
+  - 提供统一的接口管理仿真任务生命周期
+  - 支持使用 with 语句自动管理生命周期
+
+版本 1.4 (2026-06-16):
+  - 优化任务分派引擎，dispatch_manifest() 接收任务清单对象
+  - 提高接口灵活性和可测试性
+
+版本 1.3 (2026-06-16):
+  - 新增 task_dispatch_engine.py - 任务分派引擎模块
+  - 优化仿真流程引擎，增加启动员工 __Start__AI_Worker
+  - 支持将任务清单分派到仿真流程引擎的启动员工
+
+版本 1.2 (2026-06-16):
+  - 文件重命名: simulation_task_engine.py -> simulation_process_engine.py
+  - 类名重命名: SimulationTaskEngine -> SimulationProcessEngine
+
+版本 1.1 (2026-06-16):
+  - 新增 worker_type_registry.py - 智能员工类型注册表
+  - 新增 simulation_task_engine.py - 仿真任务引擎模块
+  - 支持多线程启动智能员工
+  - 支持类型注册验证
+
+版本 1.0 (2026-06-15):
+  - 初始版本
+  - 实现 TaskManifest 类
+  - 生成示例 JSON 文件
+  - 完成 TaskGraph -> TasksGraph 的重构
+
+===========================================================================
+                              依赖关系
+===========================================================================
+
+bo/ (业务对象模块):
+  - ai_worker.py: 依赖 task.py
+  - task.py: 无外部依赖
+  - task_flow_group.py: 依赖 task.py
+  - tasks_graph.py: 依赖 task.py, task_flow_group.py (延迟导入)
+  - task_manifest.py: 依赖 task_flow_group.py
+  - role.py: 无外部依赖
+  - organization.py: 依赖 ai_worker.py, task.py
+
+simulation_process_module.py:
+  - 依赖: bo/task_manifest.py (TaskManifest)
+  - 依赖: bo/organization.py (Organization)
+  - 依赖: simulation_process_engine.py (SimulationProcessEngine)
+  - 依赖: task_dispatch_engine.py (TaskDispatchEngine)
+
+task_dispatch_engine.py:
+  - 依赖: bo/task_manifest.py (TaskManifest)
+  - 依赖: bo/task_flow_group.py (TaskFlowGroup)
+  - 依赖: bo/task.py (StartTask, EndTask)
+  - 依赖: simulation_process_engine.py (SimulationProcessEngine)
+
+simulation_process_engine.py:
+  - 依赖: bo/organization.py (Organization, OrganizationFactory)
+  - 依赖: bo/ai_worker.py (AIWorker)
+  - 依赖: bo/task.py (Task, StartTask)
+  - 依赖: worker_type_registry.py (WorkerTypeRegistry)
+
+worker_type_registry.py:
+  - 依赖: bo/ai_worker.py (AIWorker)
+
+generate_graph_and_flows.py:
+  - 依赖: bo/tasks_graph.py (TasksGraph)
+  - 依赖: bo/task_flow_group.py (TaskFlowGroup)
+
+===========================================================================
+                              修订记录
+===========================================================================
+| 日期       | 版本 | 修改内容 | 修改人 |
+|------------|------|----------|--------|
+| 2026-06-16 | 1.7  | 迁移日志文件到 logs 文件夹 | System |
+| 2026-06-16 | 1.6  | 重构项目结构，迁移业务对象 | System |
+| 2026-06-16 | 1.5  | 新增仿真任务模块 | System |
+| 2026-06-16 | 1.4  | 优化任务分派引擎接口 | System |
+| 2026-06-16 | 1.3  | 新增任务分派引擎模块 | System |
+| 2026-06-16 | 1.3  | 优化仿真流程引擎，增加启动员工 | System |
+| 2026-06-16 | 1.2  | 文件和类名重命名 | System |
+| 2026-06-16 | 1.1  | 新增仿真流程引擎模块 | System |
+| 2026-06-16 | 1.1  | 新增智能员工类型注册表 | System |
+| 2026-06-15 | 1.0  | 初始版本 | System |
+===========================================================================

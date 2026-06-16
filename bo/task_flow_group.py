@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 import json
 
 # 循环引用需要延迟导入
-from task import Task, StartTask, EndTask, HaltTask
+from .task import Task, StartTask, EndTask, HaltTask
 
 
 class TaskFlowGroup(BaseModel):
@@ -271,7 +271,7 @@ class TaskFlowGroup(BaseModel):
         :param json_str: JSON格式的字符串
         :return: TaskFlowGroup 对象
         """
-        from task import Task, StartTask, EndTask, HaltTask
+        from .task import Task, StartTask, EndTask, HaltTask
         
         data = json.loads(json_str)
         
@@ -295,4 +295,4 @@ class TaskFlowGroup(BaseModel):
 
 
 # 更新类型提示引用
-TaskFlowGroup.update_forward_refs()
+TaskFlowGroup.model_rebuild()

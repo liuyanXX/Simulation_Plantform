@@ -1,0 +1,67 @@
+{
+  "org_id": "ROOT",
+  "name": "总公司",
+  "workers": [],
+  "children": [
+    {
+      "org_id": "RD",
+      "name": "研发部",
+      "workers": [
+        {
+          "employee_id": "EMP001",
+          "name": "张三",
+          "department": "研发部",
+          "roles": [
+            "DEV",
+            "TEST"
+          ],
+          "daily_work_hours": 8.0
+        },
+        {
+          "employee_id": "EMP002",
+          "name": "李四",
+          "department": "研发部",
+          "roles": [
+            "DEV"
+          ],
+          "daily_work_hours": 8.0
+        }
+      ],
+      "children": [
+        {
+          "org_id": "RD-FE",
+          "name": "前端开发组",
+          "workers": [
+            {
+              "employee_id": "EMP003",
+              "name": "王五",
+              "department": "前端开发组",
+              "roles": [
+                "DEV"
+              ],
+              "daily_work_hours": 8.0
+            }
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "org_id": "QA",
+      "name": "测试部",
+      "workers": [
+        {
+          "employee_id": "EMP004",
+          "name": "赵六",
+          "department": "测试部",
+          "roles": [
+            "TEST",
+            "QA"
+          ],
+          "daily_work_hours": 8.0
+        }
+      ],
+      "children": []
+    }
+  ]
+}

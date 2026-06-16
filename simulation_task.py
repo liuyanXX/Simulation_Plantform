@@ -90,7 +90,7 @@ class SimulationEngine:
         )
 
         file_handler = logging.FileHandler(
-            'simulation_engine.log', mode='w', encoding='utf-8'
+            'logs/simulation_engine.log', mode='w', encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)

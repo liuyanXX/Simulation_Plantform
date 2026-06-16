@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 import json
 
 # 循环引用需要延迟导入
-from task import Task, StartTask, EndTask, HaltTask
+from .task import Task, StartTask, EndTask, HaltTask
 
 
 class TasksGraph(BaseModel):
@@ -135,7 +135,7 @@ class TasksGraph(BaseModel):
         :return: 任务流组列表
         """
         # 延迟导入避免循环依赖
-        from task_flow_group import TaskFlowGroup
+        from .task_flow_group import TaskFlowGroup
         
         paths = self.extract_all_paths()
         flow_groups = []

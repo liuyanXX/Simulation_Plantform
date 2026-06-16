@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
-from ai_worker import AIWorker
-from task import Task
+from .ai_worker import AIWorker
+from .task import Task
 
 
 class Organization(BaseModel):

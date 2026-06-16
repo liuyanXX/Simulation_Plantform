@@ -1,0 +1,23 @@
+{
+  "org_id": "ROOT",
+  "name": "总公司",
+  "workers": [],
+  "children": [
+    {
+      "org_id": "RD",
+      "name": "研发部",
+      "workers": [
+        {
+          "employee_id": "EMP001",
+          "name": "张三",
+          "department": "研发部",
+          "roles": [
+            "DEV"
+          ],
+          "daily_work_hours": 8.0
+        }
+      ],
+      "children": []
+    }
+  ]
+}

@@ -3,8 +3,8 @@
 从任务清单文件解析生成任务图谱，并导出任务流组文件。
 """
 import os
-from tasks_graph import TasksGraph
-from task_flow_group import TaskFlowGroup
+from bo.tasks_graph import TasksGraph
+from bo.task_flow_group import TaskFlowGroup
 
 def main():
     # 1. 解析任务清单文件生成任务图谱
