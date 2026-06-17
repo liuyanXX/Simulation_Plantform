@@ -726,3 +726,813 @@ generate_graph_and_flows.py:
 | 2026-06-16 | 1.1  | 新增智能员工类型注册表 | System |
 | 2026-06-15 | 1.0  | 初始版本 | System |
 ===========================================================================
+
+========================================
+版本 1.8 - 新增方案对象类和方案文档对象类
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 新增文件 - bo/plan.py
+   - 创建方案模块，包含两个核心类：Plan 和 PlanDocument
+
+2. 新增类 - PlanDocument（方案文档对象类）
+   - 用于描述一个业务方案文档
+   - 主要属性：
+     - document_id: 文档唯一标识
+     - file_name: 文件名
+     - version: 版本号
+     - document_type: 文档类型（主文档/附件/参考文档）
+     - file_content: 文件对象（二进制内容或文件路径）
+     - text_content: 纯文本格式内容描述
+     - format: 文件格式
+     - size: 文件大小
+     - related_plan_ids: 关联的方案对象ID列表
+   - 主要方法：
+     - to_json(): 转换为JSON字符串
+     - update_content(): 更新文档内容
+     - add_related_plan(): 添加关联方案
+     - remove_related_plan(): 移除关联方案
+
+3. 新增类 - Plan（方案对象类）
+   - 用于描述一个业务方案
+   - 主要属性：
+     - plan_id: 方案唯一标识
+     - name: 方案名称
+     - version: 版本号
+     - status: 方案状态（草稿/审核/已批准/执行中/暂停/完成/归档）
+     - priority: 方案优先级（低/中/高/紧急）
+     - purpose: 方案目的
+     - objectives: 方案目标列表
+     - initiatives: 方案举措列表
+     - working_mechanism: 工作机制描述
+     - organization: 涉及组织列表
+     - personnel: 涉及人员列表
+     - roles: 涉及角色列表
+     - work_content: 工作内容描述
+     - constraints: 限制条件列表
+     - risks: 风险列表
+     - issues: 问题列表
+     - other_notes: 其他说明
+     - main_document_id: 主文档对象ID（必填，至少关联一个主文档）
+     - auxiliary_document_ids: 辅助文档对象ID列表（0到多个）
+     - owner: 方案负责人
+     - effective_date: 生效日期
+     - expiry_date: 到期日期
+     - tags: 标签列表
+   - 主要方法：
+     - to_json(): 转换为JSON字符串
+     - add_objective/remove_objective(): 添加/移除目标
+     - add_initiative/remove_initiative(): 添加/移除举措
+     - add_constraint(): 添加限制条件
+     - add_risk(): 添加风险
+     - add_issue(): 添加问题
+     - set_main_document(): 设置主文档
+     - add_auxiliary_document/remove_auxiliary_document(): 添加/移除辅助文档
+     - add_tag(): 添加标签
+     - get_document_count(): 获取关联文档总数
+     - get_summary(): 获取方案摘要信息
+
+4. 新增枚举类
+   - DocumentType: 文档类型（MAIN/ATTACHMENT/REFERENCE）
+   - PlanStatus: 方案状态（DRAFT/REVIEW/APPROVED/ACTIVE/SUSPENDED/COMPLETED/ARCHIVED）
+   - PlanPriority: 方案优先级（LOW/MEDIUM/HIGH/CRITICAL）
+
+========================================
+二、修改理由
+========================================
+
+1. 业务需求驱动：需要一个完整的方案管理能力，支持业务方案的创建、版本管理和文档关联
+
+2. 面向对象设计：
+   - 将方案和文档分离为独立类，符合单一职责原则
+   - 通过文档类型区分主文档和辅助文档，建立合理的关联关系
+   - 使用枚举类规范状态和优先级，避免非法值
+
+3. 数据完整性约束：
+   - 方案必须关联至少一个主文档
+   - 辅助文档必须在关联主文档后才能添加
+   - 生效日期不能晚于到期日期
+   - 必填字段（ID、名称、版本号）不能为空
+
+4. 微服务设计原则：
+   - 方案对象作为独立业务实体，可被其他模块引用
+   - 支持版本管理，便于方案迭代和追溯
+   - 提供完整的CRUD操作方法
+
+5. 扩展性设计：
+   - 通过metadata字段支持自定义扩展属性
+   - 通过tags字段支持分类和检索
+   - 通过related_plan_ids支持方案间关联
+
+========================================
+三、类关系说明
+========================================
+
+Plan（方案对象）
+    ├── 1对1: main_document_id -> PlanDocument（主文档）
+    ├── 1对多: auxiliary_document_ids -> PlanDocument（辅助文档）
+    └── 用途: 描述业务方案的完整信息
+
+PlanDocument（方案文档）
+    ├── 多对多: related_plan_ids -> Plan（关联方案）
+    └── 用途: 描述方案文档的内容和属性
+
+========================================
+四、使用示例
+========================================
+
+# 创建方案文档
+doc = PlanDocument(
+    document_id="DOC001",
+    file_name="项目实施方案.docx",
+    version="1.0",
+    document_type=DocumentType.MAIN,
+    text_content="方案内容..."
+)
+
+# 创建方案并关联文档
+plan = Plan(
+    plan_id="PLAN001",
+    name="数字化转型实施方案",
+    version="1.0",
+    purpose="推动企业数字化转型",
+    objectives=["目标1", "目标2"],
+    initiatives=["举措1", "举措2"],
+    main_document_id="DOC001"
+)
+
+# 添加辅助文档
+plan.add_auxiliary_document("DOC002")
+
+# 获取方案摘要
+summary = plan.get_summary()
+
+
+========================================
+版本 1.9 - 方案类命名优化：Plan → Solution
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 文件重命名 - bo/plan.py → bo/solution.py
+   - 将方案模块文件名从 plan.py 改为 solution.py
+
+2. 类名修改 - Plan → Solution
+   - 将方案对象类名从 Plan 改为 Solution
+   - 所有属性和方法中的 plan 前缀改为 solution 前缀
+   - 示例：plan_id → solution_id，get_summary 中的 plan_id → solution_id
+
+3. 类名修改 - PlanDocument → SolutionDocument
+   - 将方案文档对象类名从 PlanDocument 改为 SolutionDocument
+   - 所有属性和方法中的 plan 前缀改为 solution 前缀
+   - 示例：related_plan_ids → related_solution_ids，add_related_plan → add_related_solution
+
+4. 枚举类修改
+   - PlanStatus → SolutionStatus
+   - PlanPriority → SolutionPriority
+
+5. 删除旧文件 - bo/plan.py
+
+========================================
+二、修改理由
+========================================
+
+1. 术语准确性：solution 更准确地表达"方案"的含义
+   - Plan 通常指"计划"，侧重于时间安排和步骤规划
+   - Solution 指"解决方案"，更符合业务方案的定位，强调问题解决
+
+2. 行业惯例：在企业管理和业务咨询领域，Solution 是描述方案的标准术语
+
+3. 避免歧义：Plan 在项目管理中有特定含义（项目计划），使用 Solution 可避免混淆
+
+4. 命名一致性：与系统中其他业务对象命名风格保持一致
+
+========================================
+三、使用方式变化
+========================================
+
+修改前：
+    from bo.plan import Plan, PlanDocument, PlanStatus, PlanPriority
+    plan = Plan(plan_id="PLAN001", ...)
+    doc = PlanDocument(document_id="DOC001", ...)
+
+修改后：
+    from bo.solution import Solution, SolutionDocument, SolutionStatus, SolutionPriority
+    solution = Solution(solution_id="SOL001", ...)
+    doc = SolutionDocument(document_id="DOC001", ...)
+
+
+========================================
+版本 2.0 - 方案管理服务模块设计
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、新增内容
+========================================
+
+1. 新建 services/ 目录及模块
+   - services/__init__.py: 模块导出声明
+   - services/llm_client.py: 大模型客户端抽象接口
+   - services/solution_management_service.py: 方案管理服务子模块
+   - services/solution_understanding_service.py: 方案理解服务子模块
+   - services/solution_decomposition_service.py: 方案拆解服务子模块
+   - services/solution_management_module.py: 方案管理服务主模块
+
+2. LLMClient 抽象基类
+   - 定义统一的大模型调用接口 LLMClient.call(request: LLMRequest) -> LLMResponse
+   - 提供带重试机制的 call_with_retry 方法
+   - MockLLMClient 实现用于开发和测试环境
+
+3. SolutionManagementService 方案管理服务子模块
+   - 文档CRUD：create_document, get_document, update_document, delete_document
+   - 文档查询：list_documents, get_all_documents, document_exists
+   - 文档存储：save_document, load_document
+   - 文本转换：to_plain_text, to_plain_text_with_metadata
+   - 支持从文件导入并自动提取文本内容
+
+4. SolutionUnderstandingService 方案理解服务子模块
+   - 核心功能：understand_document 调用大模型将文档转为结构化方案对象
+   - 方案CRUD：create_solution, get_solution, update_solution, delete_solution
+   - 方案查询：list_solutions, get_all_solutions
+   - 方案存储：save_solution, load_solution
+   - 提示词设计：
+     * UNDERSTANDING_SYSTEM_PROMPT: 定义方案分析专家的系统角色和输出要求
+     * UNDERSTANDING_USER_PROMPT_TEMPLATE: 引导大模型提取方案结构化信息
+
+5. SolutionDecompositionService 方案拆解服务子模块
+   - 核心功能：decompose_solution 调用大模型将方案拆解为任务和任务图谱
+   - 任务CRUD：create_task, get_task, update_task, delete_task
+   - 任务图谱CRUD：create_tasks_graph, get_tasks_graph, delete_tasks_graph
+   - 任务增强：enhance_tasks 优化和补充任务列表
+   - 提示词设计：
+     * DECOMPOSITION_SYSTEM_PROMPT: 定义项目管理专家角色和任务拆解规则
+     * DECOMPOSITION_USER_PROMPT_TEMPLATE: 引导大模型生成任务执行流程
+     * TASK_ENHANCEMENT_PROMPT_TEMPLATE: 引导大模型优化任务列表
+
+6. SolutionManagementModule 方案管理服务主模块
+   - 整合三个子模块，提供统一的方案全生命周期管理入口
+   - 完整流程：process_document_full（文档 -> 方案 -> 任务图谱）
+   - 分步流程：process_document_to_solution, process_solution_to_tasks
+   - 便捷方法：import_document, create_document_from_text, understand_document, decompose_solution
+   - 统一查询和统计接口
+
+========================================
+二、修改理由
+========================================
+
+1. 微服务架构：每个子模块职责单一，便于独立部署和扩展
+2. 面向对象设计：使用抽象基类定义大模型接口，支持多种模型实现
+3. Pydantic约束：所有业务对象使用BaseModel定义，保证数据完整性和类型安全
+4. 提示词工程：为方案理解和方案拆解设计了详细的提示词模板，提高大模型输出质量
+5. 松耦合设计：三个子模块通过主模块协调，也可独立使用
+
+========================================
+三、依赖关系
+========================================
+
+services/solution_management_module.py
+  ├─ services/solution_management_service.py (文档管理)
+  ├─ services/solution_understanding_service.py (方案理解)
+  ├─ services/solution_decomposition_service.py (方案拆解)
+  └─ services/llm_client.py (大模型接口)
+
+bo/solution.py (Solution, SolutionDocument)
+bo/task.py (Task)
+bo/tasks_graph.py (TasksGraph)
+
+========================================
+四、使用示例
+========================================
+
+from services import SolutionManagementModule
+
+module = SolutionManagementModule()
+
+# 导入文档
+doc = module.import_document("path/to/doc.docx", "DOC001")
+
+# 完整流程处理
+result = module.process_document_full("DOC001")
+print(result.message)
+
+# 分步处理
+solution = module.understand_document("DOC001")
+tasks_graph = module.decompose_solution(solution.solution_id)
+
+# 查看统计
+stats = module.get_statistics()
+
+========================================
+五、大模型调用说明
+========================================
+
+方案理解服务提示词要点：
+- 角色设定：业务方案分析专家
+- 任务：将非结构化文档转化为结构化方案对象
+- 输出格式：严格的JSON格式，包含solution_id, name, version, status, priority, purpose, objectives, initiatives等字段
+- 字段约束：status必须是draft/review/approved/active/suspended/completed/archived之一；priority必须是low/medium/high/critical之一
+
+方案拆解服务提示词要点：
+- 角色设定：项目管理专家
+- 任务：将方案拆解为具体的任务执行流程
+- 输出格式：包含tasks列表和graph信息的JSON
+- 任务类型：start/normal/end/halt
+- 依赖关系：通过task_source和task_destinations建立有向边
+- 角色建议：SYSTEM, PM, DEV, TEST, OP, BA, ARCH, UI, PO
+
+
+========================================
+版本 2.1 - 目录重命名 services -> solution_management_services
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 目录重命名
+   - services/ -> solution_management_services/
+
+2. 文件路径更新
+   - 所有子模块文件仍在原位置，仅目录名改变
+   - solution_management_services/__init__.py
+   - solution_management_services/llm_client.py
+   - solution_management_services/solution_management_service.py
+   - solution_management_services/solution_understanding_service.py
+   - solution_management_services/solution_decomposition_service.py
+   - solution_management_services/solution_management_module.py
+
+3. 导入路径修改
+   - solution_management_service.py: sys.path.append 路径更新
+   - solution_understanding_service.py: sys.path.append 路径更新，导入 from solution_management_services.llm_client
+   - solution_decomposition_service.py: sys.path.append 路径更新，导入 from solution_management_services.llm_client
+   - solution_management_module.py: sys.path.append 路径更新
+
+========================================
+二、修改理由
+========================================
+
+1. 命名更清晰：solution_management_services 更明确地表达该模块的功能
+2. 避免歧义：services 名称过于通用，容易与其他项目的 services 模块冲突
+3. 命名规范：使用复数形式表示一个包含多个服务子模块的包
+
+========================================
+三、使用方式变化
+========================================
+
+修改前：
+    from services import SolutionManagementModule
+    from services.solution_understanding_service import SolutionUnderstandingService
+
+修改后：
+    from solution_management_services import SolutionManagementModule
+    from solution_management_services.solution_understanding_service import SolutionUnderstandingService
+
+
+========================================
+版本 2.2 - 方案评估与分析服务模块设计
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 新建目录
+   - 新建 solution_evaluation_services/ 目录
+
+2. 新建文件
+   - solution_evaluation_services/__init__.py: 模块导出声明
+   - solution_evaluation_services/evaluation_models.py: 评估结果和指标模型
+   - solution_evaluation_services/solution_evaluation_service.py: 方案评估服务类
+   - solution_evaluation_services/solution_analysis_service.py: 方案分析服务类
+
+3. 评估维度定义（EvaluationDimension）
+   - FEASIBILITY: 可行性评估
+   - RISK: 风险评估
+   - RESOURCE: 资源评估
+   - BENEFIT: 效益分析
+   - COMPLIANCE: 合规性评估
+   - STRATEGY: 战略对齐度
+
+4. 评估等级定义（EvaluationLevel）
+   - excellent: 90-100分
+   - good: 75-89分
+   - average: 60-74分
+   - poor: 40-59分
+   - critical: 0-39分
+
+5. 评估模型定义
+   - EvaluationMetric: 评估指标
+   - EvaluationResult: 评估结果
+   - FeasibilityEvaluation: 可行性评估
+   - RiskAssessment: 风险评估
+   - ResourceAssessment: 资源评估
+   - BenefitAnalysis: 效益分析
+   - ComplianceAssessment: 合规性评估
+   - StrategyAlignment: 战略对齐度
+   - AnalysisInsight: 分析洞察
+   - EvaluationComparison: 方案评估对比
+
+6. 方案评估服务（SolutionEvaluationService）
+   - evaluate_solution: 调用大模型进行全面评估
+   - evaluate_feasibility: 可行性评估
+   - assess_risk: 风险评估
+   - assess_resources: 资源评估
+   - analyze_benefits: 效益分析
+   - assess_compliance: 合规性评估
+   - assess_strategy_alignment: 战略对齐度评估
+   - compare_solutions: 方案对比
+   - CRUD: 评估结果的增删改查存
+
+7. 方案分析服务（SolutionAnalysisService）
+   - analyze_solution: 调用大模型进行深度分析
+   - analyze_trend: 趋势分析
+   - analyze_comparison: 对比分析
+   - analyze_sensitivity: 敏感性分析
+   - analyze_impact: 影响分析
+   - analyze_optimization: 优化分析
+   - analyze_risk: 风险分析
+   - analyze_resources: 资源分析
+   - analyze_task_dependencies: 任务依赖分析（关键路径、瓶颈识别）
+   - CRUD: 分析洞察的增删改查存
+
+8. 大模型提示词设计
+   - EVALUATION_SYSTEM_PROMPT: 评估系统提示词
+   - EVALUATION_USER_PROMPT_TEMPLATE: 评估用户提示词模板
+   - ANALYSIS_SYSTEM_PROMPT: 分析系统提示词
+   - ANALYSIS_USER_PROMPT_TEMPLATE: 分析用户提示词模板
+
+========================================
+二、修改理由
+========================================
+
+1. 完善方案全生命周期管理：在方案管理、理解、拆解之后，增加评估与分析环节
+2. 多维度评估：提供可行性、风险、资源、效益、合规性、战略对齐六个维度的评估
+3. 深度分析：提供趋势分析、对比分析、敏感性分析、影响分析、优化分析等
+4. 智能决策支持：通过大模型生成分析洞察和改进建议
+5. 任务依赖分析：识别关键路径和瓶颈任务，支持方案执行优化
+
+========================================
+三、使用方式
+========================================
+
+评估服务：
+    from solution_evaluation_services import SolutionEvaluationService
+    service = SolutionEvaluationService()
+    result = service.evaluate_solution(solution)
+
+分析服务：
+    from solution_evaluation_services import SolutionAnalysisService
+    service = SolutionAnalysisService()
+    insights = service.analyze_solution(solution, "optimization")
+
+
+========================================
+版本 2.3 - 评价Agent与方案评价对象设计
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 新建文件
+   - solution_evaluation_services/base_evaluation_agent.py: 评价Agent父类
+   - solution_evaluation_services/solution_evaluation.py: 方案评价对象
+   - solution_evaluation_services/agent_registry.py: Agent服务注册表
+
+2. 评价Agent父类（BaseEvaluationAgent）
+   共性属性：
+   - agent_id: Agent唯一标识
+   - name: Agent名称
+   - agent_type: Agent类型（枚举）
+   - status: Agent状态（idle/busy/error/offline）
+   - config: Agent配置对象
+   
+   共性方法：
+   - call_llm(): 调用大语言模型（使用agno库）
+   - call_knowledge_base(): 调用知识库检索
+   - evaluate(): 执行评估（抽象方法，子类实现）
+   - get_info(): 获取Agent信息
+   - reset(): 重置Agent状态
+   - shutdown(): 关闭Agent
+
+3. Agent类型定义（AgentType枚举）
+   - FEASIBILITY: 可行性评估Agent
+   - RISK: 风险评估Agent
+   - RESOURCE: 资源评估Agent
+   - BENEFIT: 效益评估Agent
+   - COMPLIANCE: 合规性评估Agent
+   - STRATEGY: 战略对齐评估Agent
+   - GENERAL: 通用评估Agent
+   - CUSTOM: 自定义评估Agent
+
+4. 具体Agent实现
+   - FeasibilityEvaluationAgent: 可行性评估Agent
+   - RiskEvaluationAgent: 风险评估Agent
+
+5. 方案评价对象（SolutionEvaluation）
+   存储内容：
+   - 方案信息：solution_id, solution_name, solution_version等
+   - 评价维度：evaluation_dimensions列表
+   - Agent映射：dimension_agents字典{维度: AgentID}
+   - 评价结果：dimension_evaluations列表
+   - 综合结果：overall_score, overall_level, overall_summary
+   
+   核心方法：
+   - from_solution(): 从方案对象创建评价对象
+   - add_dimension_evaluation(): 添加维度评价结果
+   - set_dimension_agent(): 设置维度对应的Agent
+   - get_dimension_evaluation(): 获取指定维度的评价结果
+   - get_summary(): 获取评价摘要
+   - get_detailed_report(): 获取详细评价报告
+
+6. 维度评价结果（DimensionEvaluation）
+   - dimension: 评价维度
+   - agent_id: 执行评价的Agent ID
+   - score: 评价得分(0-100)
+   - level: 评价等级
+   - summary: 评价摘要
+   - details: 详细评价信息
+   - recommendations: 改进建议列表
+   - confidence: 置信度
+   - status: 评价状态
+
+7. Agent服务注册表（AgentRegistry）
+   功能：
+   - register(): 注册Agent
+   - unregister(): 注销Agent
+   - get_agent(): 获取Agent实例
+   - get_agents_by_type(): 按类型获取Agent列表
+   - get_available_agents(): 获取可用Agent列表
+   - select_agent(): 选择Agent（支持负载均衡）
+   - heartbeat(): 更新Agent心跳
+   - check_health(): 检查Agent健康状态
+   - get_statistics(): 获取注册表统计信息
+   
+   负载均衡策略：
+   - round_robin: 轮询
+   - random: 随机
+   - least_used: 最少使用
+
+8. 全局注册表函数
+   - get_registry(): 获取全局注册表实例
+   - register_agent(): 注册Agent到全局注册表
+   - get_agent(): 从全局注册表获取Agent
+   - select_agent(): 从全局注册表选择Agent
+
+========================================
+二、修改理由
+========================================
+
+1. Agent化设计：将评估能力封装为Agent，支持分布式部署和独立扩展
+2. 使用agno库：采用轻量级高性能的Agent框架，支持多种大模型
+3. 服务注册表：实现Agent的服务发现和负载均衡
+4. 方案评价对象：支持多维度评价，每个维度可使用专门的Agent
+5. 可扩展性：通过继承BaseEvaluationAgent可快速实现新的评估Agent
+
+========================================
+三、使用方式
+========================================
+
+1. 创建Agent配置：
+    from solution_evaluation_services import AgentConfig, AgentType
+    config = AgentConfig(
+        agent_id="FEAS_001",
+        name="可行性评估Agent",
+        agent_type=AgentType.FEASIBILITY,
+        model_name="gpt-4o",
+        model_provider="openai"
+    )
+
+2. 创建并注册Agent：
+    from solution_evaluation_services import FeasibilityEvaluationAgent, register_agent
+    agent = FeasibilityEvaluationAgent(config)
+    register_agent(agent)
+
+3. 创建方案评价对象：
+    from solution_evaluation_services import SolutionEvaluation
+    evaluation = SolutionEvaluation.from_solution(solution, "EVAL_001", ["feasibility", "risk"])
+
+4. 执行评估：
+    from solution_evaluation_services import EvaluationContext, select_agent, AgentType
+    agent = select_agent(AgentType.FEASIBILITY)
+    context = EvaluationContext(
+        solution_id=solution.solution_id,
+        solution_name=solution.name,
+        solution_content=solution.work_content,
+        evaluation_dimension="feasibility"
+    )
+    result = agent.evaluate(context)
+    evaluation.add_dimension_evaluation(result)
+
+5. 获取评价报告：
+    report = evaluation.get_detailed_report()
+
+
+========================================
+版本 2.4 - 评价Agent、服务网关与评价代理实现
+========================================
+
+修改日期：2026年06月17日
+修改人：系统自动记录
+
+========================================
+一、修改内容
+========================================
+
+1. 新建文件
+   - solution_evaluation_services/completeness_evaluation_agent.py: 完整性评价Agent
+   - solution_evaluation_services/rationality_evaluation_agent.py: 合理性评价Agent
+   - solution_evaluation_services/simulation_analysis_agent.py: 仿真结果分析Agent
+   - solution_evaluation_services/service_gateway.py: 服务网关
+   - solution_evaluation_services/evaluation_proxy.py: 评价代理
+
+2. 完整性评价Agent（CompletenessEvaluationAgent）
+   继承自BaseEvaluationAgent
+   - 使用ollama本地大模型进行完整性评价
+   - 从知识库获取完整性指标相关知识
+   - evaluate_solution(): 评价方案完整性
+   - 支持知识库加载和检索
+   
+   完整性评估指标：
+   - 目标完整性：方案目标是否明确、具体、可衡量
+   - 举措完整性：方案举措是否覆盖所有关键环节
+   - 资源完整性：方案是否明确所需资源及其来源
+   - 风险完整性：方案是否识别主要风险并制定应对措施
+   - 时间完整性：方案是否明确时间节点和里程碑
+   - 责任完整性：方案是否明确责任人和组织架构
+
+3. 合理性评价Agent（RationalityEvaluationAgent）
+   继承自BaseEvaluationAgent
+   - 使用ollama本地大模型进行合理性评价
+   - 从知识库获取合理性指标相关知识
+   - evaluate_solution(): 评价方案合理性
+   - 支持知识库加载和检索
+   
+   合理性评估指标：
+   - 战略一致性：方案是否与组织战略目标一致
+   - 技术可行性：方案技术方案是否可行
+   - 经济合理性：方案经济效益是否合理
+   - 操作可行性：方案操作流程是否可行
+   - 资源匹配度：方案资源配置是否匹配需求
+   - 时间合理性：方案时间安排是否合理
+
+4. 仿真结果分析Agent（SimulationAnalysisAgent）
+   继承自BaseEvaluationAgent
+   - 使用ollama本地大模型进行效率和完备性评价
+   - 从知识库获取效率和完备性指标相关知识
+   - evaluate_solution(): 分析方案仿真结果
+   - 支持仿真日志输入
+   
+   效率和完备性评估指标：
+   - 执行效率：仿真执行时间是否合理
+   - 资源效率：资源消耗是否合理
+   - 覆盖完备性：是否覆盖所有关键场景
+   - 结果完备性：仿真结果是否完整
+   - 数据准确性：仿真数据是否准确
+   - 系统稳定性：仿真过程是否稳定
+
+5. 服务网关（ServiceGateway）
+   职责：
+   - 接收并解析方案评价对象
+   - 按照评价维度启动对应的评价Agent
+   - 将评价内容转发给评价Agent
+   - 将Agent评价结果反馈给评价代理
+   
+   核心方法：
+   - route_to_agent(): 将评价请求路由到对应的Agent
+   - process_evaluation(): 处理方案评价请求
+   - get_available_agents(): 获取可用的Agent信息
+   - register_dimension_agent_mapping(): 注册维度-Agent映射
+
+6. 评价代理（EvaluationProxy）
+   职责：
+   - 接收被评价方案及评价要求
+   - 根据评价要求找到对应的评价Agent
+   - 把方案对象通过服务网关传递给对应的评价Agent
+   - 接收评价Agent给出的结论
+   - 整合所有评价Agent给出的评价结论，并向前返回
+   - 所有操作内容记录日志
+   - 如果评价要求中涉及仿真结果，则查找仿真日志并传递给仿真结果分析Agent
+   
+   核心方法：
+   - create_evaluation(): 创建方案评价对象
+   - evaluate_solution(): 评价方案
+   - _find_simulation_log(): 查找方案的仿真日志
+   - _log_operation(): 记录操作日志
+   - save_evaluation(): 保存评价结果
+   - load_evaluation(): 加载评价结果
+
+7. 维度-Agent映射
+   - completeness -> AgentType.CUSTOM
+   - rationality -> AgentType.CUSTOM
+   - simulation -> AgentType.CUSTOM
+   - feasibility -> AgentType.FEASIBILITY
+   - risk -> AgentType.RISK
+   - resource -> AgentType.RESOURCE
+   - benefit -> AgentType.BENEFIT
+   - compliance -> AgentType.COMPLIANCE
+   - strategy -> AgentType.STRATEGY
+
+========================================
+二、修改理由
+========================================
+
+1. Agent化实现：将评价能力封装为独立的Agent，支持分布式部署
+2. 知识库集成：在调用大模型前先从知识库获取相关知识，提高评价准确性
+3. 服务网关：实现评价请求的路由和分发，支持负载均衡
+4. 评价代理：提供统一的评价入口，协调多个Agent完成多维度评价
+5. 仿真分析：支持对仿真结果进行分析，评估方案的效率和完备性
+6. 日志记录：所有操作记录日志，便于追踪和审计
+
+========================================
+三、使用方式
+========================================
+
+1. 创建并注册Agent：
+    from solution_evaluation_services import (
+        AgentConfig, AgentType, 
+        CompletenessEvaluationAgent, 
+        RationalityEvaluationAgent,
+        SimulationAnalysisAgent,
+        register_agent
+    )
+    
+    # 完整性评价Agent
+    config = AgentConfig(
+        agent_id="COMP_001",
+        name="完整性评价Agent",
+        agent_type=AgentType.CUSTOM,
+        model_name="llama3",
+        model_provider="ollama",
+        base_url="http://localhost:11434"
+    )
+    agent = CompletenessEvaluationAgent(config, knowledge_base_path="knowledge")
+    register_agent(agent)
+    
+    # 合理性评价Agent
+    config = AgentConfig(
+        agent_id="RAT_001",
+        name="合理性评价Agent",
+        agent_type=AgentType.CUSTOM,
+        model_name="llama3",
+        model_provider="ollama",
+        base_url="http://localhost:11434"
+    )
+    agent = RationalityEvaluationAgent(config, knowledge_base_path="knowledge")
+    register_agent(agent)
+    
+    # 仿真结果分析Agent
+    config = AgentConfig(
+        agent_id="SIM_001",
+        name="仿真结果分析Agent",
+        agent_type=AgentType.CUSTOM,
+        model_name="llama3",
+        model_provider="ollama",
+        base_url="http://localhost:11434"
+    )
+    agent = SimulationAnalysisAgent(config, knowledge_base_path="knowledge")
+    register_agent(agent)
+
+2. 使用评价代理进行评价：
+    from solution_evaluation_services import EvaluationProxy
+    proxy = EvaluationProxy()
+    
+    # 评价方案
+    evaluation = proxy.evaluate_solution(
+        solution=solution,
+        dimensions=["completeness", "rationality"],
+        evaluator="系统管理员",
+        include_simulation=False
+    )
+    
+    # 获取评价报告
+    report = proxy.get_evaluation_report(evaluation)
+    print(f"综合得分: {report['overall']['score']}")
+    print(f"综合等级: {report['overall']['level']}")
+
+3. 保存评价结果：
+    save_path = proxy.save_evaluation(evaluation)
+
