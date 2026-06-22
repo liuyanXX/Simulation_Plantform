@@ -41,6 +41,7 @@ class TaskFlowGroup(BaseModel):
     flow_name: str = Field(description="任务流名称（人类可读）")
     tasks: List['Task'] = Field(default_factory=list, description="任务列表，按执行顺序排列")
     description: Optional[str] = Field(default=None, description="任务流描述")
+    _manifest_id: Optional[str] = None
     
     @model_validator(mode='after')
     def validate_task_flow(self) -> 'TaskFlowGroup':
@@ -48,7 +49,6 @@ class TaskFlowGroup(BaseModel):
         if not self.tasks:
             raise ValueError("任务流不能为空，至少需要包含开始任务、普通任务和结束任务")
         
-        # 验证必须有且仅有一个开始任务，且在首位
         start_tasks = [t for t in self.tasks if isinstance(t, StartTask)]
         if len(start_tasks) != 1:
             raise ValueError(f"任务流必须有且仅有一个开始任务，当前有 {len(start_tasks)} 个")
@@ -56,7 +56,6 @@ class TaskFlowGroup(BaseModel):
         if not isinstance(self.tasks[0], StartTask):
             raise ValueError("开始任务必须位于任务流的首位")
         
-        # 验证必须有且仅有一个终点任务，且在末位
         end_tasks = [t for t in self.tasks if isinstance(t, (EndTask, HaltTask))]
         if len(end_tasks) != 1:
             raise ValueError(f"任务流必须有且仅有一个终点任务，当前有 {len(end_tasks)} 个")
@@ -64,14 +63,12 @@ class TaskFlowGroup(BaseModel):
         if not isinstance(self.tasks[-1], (EndTask, HaltTask)):
             raise ValueError("终点任务必须位于任务流的末位")
         
-        # 验证不能从StartTask直接到EndTask或HaltTask
         if len(self.tasks) < 3:
             raise ValueError("任务流至少需要包含3个任务：开始任务、至少一个普通任务、终点任务")
         
         if isinstance(self.tasks[1], (EndTask, HaltTask)):
             raise ValueError("开始任务不能直接连接到终点任务，中间必须至少有一个普通任务")
         
-        # 验证任务链的连续性
         self._validate_task_chain()
         
         return self
@@ -82,11 +79,9 @@ class TaskFlowGroup(BaseModel):
             current_task = self.tasks[i]
             next_task = self.tasks[i + 1]
             
-            # 设置当前任务的task_destinations包含下一任务ID
             if next_task.task_id not in current_task.task_destinations:
                 current_task.task_destinations.append(next_task.task_id)
             
-            # 清理当前任务中不属于任务流的任务ID
             valid_destinations = []
             task_ids = {t.task_id for t in self.tasks[i+1:]}
             for dest_id in current_task.task_destinations:
@@ -94,10 +89,8 @@ class TaskFlowGroup(BaseModel):
                     valid_destinations.append(dest_id)
             current_task.task_destinations = valid_destinations
             
-            # 设置下一任务的task_source为当前任务ID
             next_task.task_source = current_task.task_id
             
-            # 设置当前任务的output_target_role为下一任务的execute_role
             if isinstance(next_task, (EndTask, HaltTask)):
                 current_task.output_target_role = ""
             else:
@@ -112,28 +105,23 @@ class TaskFlowGroup(BaseModel):
         :raises ValueError: 如果添加位置无效或违反任务流约束
         """
         if not self.tasks:
-            # 如果任务流为空，只允许添加StartTask
             if not isinstance(task, StartTask):
                 raise ValueError("空任务流只能先添加StartTask")
             self.tasks.append(task)
             return
         
-        # 检查是否已经有开始任务
         has_start = any(isinstance(t, StartTask) for t in self.tasks)
         has_end = any(isinstance(t, (EndTask, HaltTask)) for t in self.tasks)
         
         if isinstance(task, StartTask):
             if has_start:
                 raise ValueError("任务流已经有一个开始任务")
-            # 插入到首位
             self.tasks.insert(0, task)
         elif isinstance(task, (EndTask, HaltTask)):
             if has_end:
                 raise ValueError("任务流已经有一个终点任务")
-            # 添加到末尾
             self.tasks.append(task)
         else:
-            # 普通任务，插入到指定位置或终点任务之前
             if position is not None:
                 if position < 0 or position > len(self.tasks):
                     raise ValueError("插入位置无效")
@@ -141,20 +129,17 @@ class TaskFlowGroup(BaseModel):
                     raise ValueError("普通任务不能插入到终点任务之后")
                 insert_pos = position
             else:
-                # 默认插入到终点任务之前
                 if has_end:
                     insert_pos = len(self.tasks) - 1
                 else:
                     insert_pos = len(self.tasks)
             
-            # 重置任务的关联属性，让 _validate_task_chain 重新设置
             task.task_source = None
             task.task_destinations = []
             task.output_target_role = ""
             
             self.tasks.insert(insert_pos, task)
         
-        # 重新验证任务流
         self._validate_task_chain()
     
     def remove_task(self, task_id: str) -> None:
@@ -178,7 +163,6 @@ class TaskFlowGroup(BaseModel):
         
         del self.tasks[task_index]
         
-        # 重新验证任务流
         self._validate_task_chain()
     
     def update_task(self, task_id: str, **kwargs) -> None:
@@ -259,7 +243,137 @@ class TaskFlowGroup(BaseModel):
             "normal_task_count": len(normal_tasks),
             "normal_task_ids": [t.task_id for t in normal_tasks]
         }
-    
+
+    def save(self) -> bool:
+        """
+        保存任务流组到数据库（新增或更新）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            if service.exists(self.flow_id):
+                service.update(self)
+            else:
+                service.create_with_tasks(self, manifest_id=self._manifest_id)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> int:
+        """
+        从数据库删除任务流组及其所有任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 删除的任务数量
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.delete_with_tasks(self.flow_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, flow_id: str) -> Optional['TaskFlowGroup']:
+        """
+        按任务流组ID查询任务流组（包含任务列表）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param flow_id: 任务流组ID
+        :return: 任务流组对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.read_with_tasks(flow_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['TaskFlowGroup']:
+        """
+        按条件查询任务流组
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件，如 {"flow_name": "流程1"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 任务流组列表
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['TaskFlowGroup']:
+        """
+        全量查询任务流组
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 任务流组列表
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, flow_id: str) -> bool:
+        """
+        检查任务流组是否存在
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param flow_id: 任务流组ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.exists(flow_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计任务流组数量
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件
+        :return: 任务流组数量
+        """
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        
+        service = TaskFlowGroupService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
+
     @classmethod
     def from_json(cls, json_str: str) -> 'TaskFlowGroup':
         """
@@ -272,7 +386,6 @@ class TaskFlowGroup(BaseModel):
         
         data = json.loads(json_str)
         
-        # 根据 task_type 字段创建正确的任务类型对象
         if 'tasks' in data:
             processed_tasks = []
             for task_data in data['tasks']:
@@ -291,6 +404,5 @@ class TaskFlowGroup(BaseModel):
         return cls(**data)
 
 
-# 延迟导入避免循环依赖，然后更新类型提示引用
 from .task import Task, StartTask, EndTask, HaltTask
 TaskFlowGroup.update_forward_refs()

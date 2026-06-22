@@ -12,13 +12,16 @@ import logging
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(MODULE_DIR)
+
 from .solution_management_service import SolutionManagementService
 from .solution_understanding_service import SolutionUnderstandingService
 from .solution_decomposition_service import SolutionDecompositionService
-from .llm_client import LLMClient, MockLLMClient
+from ai_modules.basic.llm_client import LLMClient, LLMClientFactory
 
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/..')
+sys.path.append(PROJECT_ROOT)
 from bo.solution import Solution, SolutionDocument
 from bo.task import Task
 from bo.tasks_graph import TasksGraph
@@ -75,11 +78,24 @@ class SolutionManagementModule:
     def __init__(
         self,
         llm_client: Optional[LLMClient] = None,
-        storage_base_path: str = "data",
-        logger: Optional[logging.Logger] = None
+        storage_base_path: str = os.path.join(PROJECT_ROOT, "data"),
+        logger: Optional[logging.Logger] = None,
+        client_type: Optional[str] = None
     ):
+        """
+        初始化方案管理服务主模块
+        
+        :param llm_client: 大模型客户端（可选，默认通过工厂创建）
+        :param storage_base_path: 基础存储路径
+        :param logger: 日志记录器
+        :param client_type: 客户端类型（可选，默认从配置读取）
+        """
         self._logger = logger or self._setup_logging()
-        self._llm_client = llm_client or MockLLMClient()
+        
+        if llm_client is None:
+            self._llm_client = LLMClientFactory.create_client(client_type=client_type)
+        else:
+            self._llm_client = llm_client
         
         # 初始化三个子模块
         self._doc_service = SolutionManagementService(

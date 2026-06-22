@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/..')
 from bo.solution import Solution, SolutionDocument, SolutionStatus, SolutionPriority
-from solution_management_services.llm_client import LLMClient, LLMRequest, MockLLMClient
+from ai_modules.basic.llm_client import LLMClient, LLMRequest, LLMClientFactory
 
 
 class UnderstandingResult(BaseModel):
@@ -111,9 +111,21 @@ class SolutionUnderstandingService:
         self,
         llm_client: Optional[LLMClient] = None,
         storage_path: str = "solutions",
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
+        client_type: Optional[str] = None
     ):
-        self._llm_client = llm_client or MockLLMClient()
+        """
+        初始化方案理解服务
+        
+        :param llm_client: 大模型客户端（可选，默认通过工厂创建）
+        :param storage_path: 方案存储路径
+        :param logger: 日志记录器
+        :param client_type: 客户端类型（可选，默认从配置读取）
+        """
+        if llm_client is None:
+            self._llm_client = LLMClientFactory.create_client(client_type=client_type)
+        else:
+            self._llm_client = llm_client
         self._storage_path = storage_path
         self._solutions: Dict[str, Solution] = {}
         self._logger = logger or self._setup_logging()

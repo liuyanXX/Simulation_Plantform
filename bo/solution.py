@@ -138,6 +138,154 @@ class SolutionDocument(BaseModel):
         """返回文档的字符串表示"""
         return f"SolutionDocument(ID={self.document_id}, 文件名={self.file_name}, 版本={self.version}, 类型={self.document_type})"
 
+    def save(self) -> bool:
+        """
+        保存文档到数据库（新增或更新）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            if service.exists(self.document_id):
+                service.update(self)
+            else:
+                service.create(self)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> bool:
+        """
+        从数据库删除文档
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 删除成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.delete(self.document_id) == 1
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, document_id: str) -> Optional['SolutionDocument']:
+        """
+        按文档ID查询文档
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param document_id: 文档ID
+        :return: 文档对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read(document_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['SolutionDocument']:
+        """
+        按条件查询文档
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件，如 {"file_name": "方案"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['SolutionDocument']:
+        """
+        全量查询文档
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_solution(cls, solution_id: str) -> List['SolutionDocument']:
+        """
+        获取方案的所有文档
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param solution_id: 方案ID
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.get_by_solution(solution_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, document_id: str) -> bool:
+        """
+        检查文档是否存在
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param document_id: 文档ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.exists(document_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计文档数量
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件
+        :return: 文档数量
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
+
 
 class Solution(BaseModel):
     """
@@ -400,6 +548,190 @@ class Solution(BaseModel):
             f"Solution(ID={self.solution_id}, 名称={self.name}, 版本={self.version}, "
             f"状态={self.status}, 优先级={self.priority}, 负责人={self.owner})"
         )
+
+    def save(self) -> bool:
+        """
+        保存方案到数据库（新增或更新）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            if service.exists(self.solution_id):
+                service.update(self)
+            else:
+                service.create(self)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> bool:
+        """
+        从数据库删除方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 删除成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.delete(self.solution_id) == 1
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, solution_id: str) -> Optional['Solution']:
+        """
+        按方案ID查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param solution_id: 方案ID
+        :return: 方案对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.read(solution_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['Solution']:
+        """
+        按条件查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件，如 {"status": "active"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 方案列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['Solution']:
+        """
+        全量查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 方案列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_status(cls, status: SolutionStatus) -> List['Solution']:
+        """
+        按状态查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param status: 方案状态
+        :return: 方案列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.get_by_status(status)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_owner(cls, owner: str) -> List['Solution']:
+        """
+        按负责人查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param owner: 负责人
+        :return: 方案列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.get_by_owner(owner)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def search_by_name(cls, keyword: str) -> List['Solution']:
+        """
+        按名称模糊查询方案
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param keyword: 关键词
+        :return: 方案列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.search_by_name(keyword)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, solution_id: str) -> bool:
+        """
+        检查方案是否存在
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param solution_id: 方案ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.exists(solution_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计方案数量
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件
+        :return: 方案数量
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionService
+        
+        service = SolutionService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
 
 
 if __name__ == "__main__":

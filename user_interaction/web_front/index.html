@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 用户交互界面</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-dark: #4338ca;
+            --secondary: #06b6d4;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-hover: rgba(51, 65, 85, 0.6);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: rgba(148, 163, 184, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景 */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(79, 70, 229, 0.05) 0%, transparent 70%);
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(rgba(79, 70, 229, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(79, 70, 229, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            -webkit-text-fill-color: white;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-item {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .nav-item.active {
+            color: var(--primary-light);
+            background: rgba(79, 70, 229, 0.15);
+        }
+
+        /* 主内容区 */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .page-desc {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* 表单 */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-select option {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        /* 标签输入 */
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            min-height: 44px;
+        }
+
+        .tag {
+            background: rgba(79, 70, 229, 0.2);
+            color: var(--primary-light);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+        }
+
+        .tag-risk {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .tag-issue {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+        }
+
+        .tag-info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-row .form-input {
+            flex: 1;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .tag-input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            flex: 1;
+            min-width: 100px;
+            font-size: 14px;
+        }
+
+        .tag-input:focus {
+            outline: none;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(79, 70, 229, 0.15);
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #16a34a);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+        }
+
+        .btn-error {
+            background: linear-gradient(135deg, var(--error), #dc2626);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* 列表 */
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .list-item {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .list-item:hover {
+            background: var(--bg-hover);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .list-item-info h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .list-item-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 步骤条 */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 32px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 12px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: rgba(79, 70, 229, 0.15);
+            color: var(--primary-light);
+        }
+
+        .step.completed {
+            color: var(--success);
+        }
+
+        .step-divider {
+            width: 24px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* 复选框列表 */
+        .checkbox-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-item:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .checkbox-item.selected {
+            border-color: var(--primary);
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--primary);
+        }
+
+        .checkbox-content h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .checkbox-content p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* 日志显示 */
+        .log-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            color: #a5b4fc;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+        }
+
+        .log-time {
+            color: var(--text-secondary);
+        }
+
+        .log-level-info { color: #22d3ee; }
+        .log-level-warn { color: #fbbf24; }
+        .log-level-error { color: #f87171; }
+
+        /* 进度条 */
+        .progress-container {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 8px;
+            transition: width 0.5s ease;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-running {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .status-completed {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--secondary);
+        }
+
+        .status-aborted {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        /* 消息提示 */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toast-success .toast-icon { background: rgba(34, 197, 94, 0.2); }
+        .toast-warning .toast-icon { background: rgba(245, 158, 11, 0.2); }
+        .toast-error .toast-icon { background: rgba(239, 68, 68, 0.2); }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .navbar-inner {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 12px 0;
+            }
+
+            .nav-menu {
+                width: 100%;
+                justify-content: center;
+                margin-top: 12px;
+                flex-wrap: wrap;
+            }
+
+            .main-container {
+                padding: 16px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .checkbox-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(79, 70, 229, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 70, 229, 0.5);
+        }
+
+        /* 隐藏元素 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 动画 */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="bg-animation"></div>
+
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-inner">
+                <div class="logo">
+                    <div class="logo-icon">◈</div>
+                    仿真平台
+                </div>
+                <div class="nav-menu">
+                    <button
+                        v-for="item in navItems"
+                        :key="item.key"
+                        class="nav-item"
+                        :class="{ active: currentView === item.key }"
+                        @click="switchView(item.key)"
+                    >
+                        {{ item.label }}
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="main-container">
+            <!-- 方案管理 -->
+            <section v-if="currentView === 'solution'" key="solution">
+                <h1 class="page-title">方案管理</h1>
+                <p class="page-desc">录入、保存和管理业务方案</p>
+
+                <!-- 步骤条 -->
+                <div class="steps">
+                    <div class="step" :class="{ active: solutionStep === 0, completed: solutionStep > 0 }">
+                        <span>①</span> 录入方案
+                    </div>
+                    <div class="step-divider"></div>
+                    <div class="step" :class="{ active: solutionStep === 1, completed: solutionStep > 1 }">
+                        <span>②</span> 保存确认
+                    </div>
+                </div>
+
+                <!-- 录入方案 -->
+                <div v-if="solutionStep === 0" class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(79, 70, 229, 0.2); color: #818cf8;">📝</div>
+                            录入方案
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">方案ID *</label>
+                            <input class="form-input" v-model="solutionForm.solution_id" placeholder="如：SOL001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">方案名称 *</label>
+                            <input class="form-input" v-model="solutionForm.name" placeholder="请输入方案名称">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">版本号</label>
+                            <input class="form-input" v-model="solutionForm.version" placeholder="1.0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">优先级</label>
+                            <select class="form-select" v-model="solutionForm.priority">
+                                <option value="low">低</option>
+                                <option value="medium">中</option>
+                                <option value="high">高</option>
+                                <option value="critical">紧急</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">方案目的</label>
+                            <textarea class="form-textarea" v-model="solutionForm.purpose" placeholder="描述方案的目的和背景"></textarea>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">方案目标</label>
+                            <div class="tag-input-container">
+                                <span class="tag" v-for="(tag, i) in solutionForm.objectives" :key="i">
+                                    {{ tag }}
+                                    <span class="tag-remove" @click="removeTag('objectives', i)">×</span>
+                                </span>
+                                <input
+                                    class="tag-input"
+                                    v-model="newObjective"
+                                    @keydown.enter.prevent="addTag('objectives', newObjective); newObjective = ''"
+                                    placeholder="输入目标后按回车"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">方案举措</label>
+                            <div class="tag-input-container">
+                                <span class="tag" v-for="(tag, i) in solutionForm.initiatives" :key="i">
+                                    {{ tag }}
+                                    <span class="tag-remove" @click="removeTag('initiatives', i)">×</span>
+                                </span>
+                                <input
+                                    class="tag-input"
+                                    v-model="newInitiative"
+                                    @keydown.enter.prevent="addTag('initiatives', newInitiative); newInitiative = ''"
+                                    placeholder="输入举措后按回车"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">工作机制</label>
+                            <textarea class="form-textarea" v-model="solutionForm.working_mechanism" placeholder="描述工作机制"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">涉及组织</label>
+                            <div class="tag-input-container">
+                                <span class="tag" v-for="(tag, i) in solutionForm.organization" :key="i">
+                                    {{ tag }}
+                                    <span class="tag-remove" @click="removeTag('organization', i)">×</span>
+                                </span>
+                                <input
+                                    class="tag-input"
+                                    v-model="newOrg"
+                                    @keydown.enter.prevent="addTag('organization', newOrg); newOrg = ''"
+                                    placeholder="输入组织后按回车"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">涉及角色</label>
+                            <div class="tag-input-container">
+                                <span class="tag" v-for="(tag, i) in solutionForm.roles" :key="i">
+                                    {{ tag }}
+                                    <span class="tag-remove" @click="removeTag('roles', i)">×</span>
+                                </span>
+                                <input
+                                    class="tag-input"
+                                    v-model="newRole"
+                                    @keydown.enter.prevent="addTag('roles', newRole); newRole = ''"
+                                    placeholder="输入角色后按回车"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">工作内容</label>
+                            <textarea class="form-textarea" v-model="solutionForm.work_content" placeholder="描述具体工作内容"></textarea>
+                        </div>
+                        <!-- 涉及人员 -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">涉及人员</label>
+                            <div class="tag-input-container">
+                                <div class="tag-list" v-if="solutionForm.personnel && solutionForm.personnel.length > 0">
+                                    <span class="tag" v-for="(item, index) in solutionForm.personnel" :key="index">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="removeTag('personnel', index)">×</span>
+                                    </span>
+                                </div>
+                                <div class="input-row">
+                                    <input class="form-input" v-model="newPersonnel" @keyup.enter="addTag('personnel', newPersonnel); newPersonnel = ''" placeholder="输入人员名称后按回车添加">
+                                    <button class="btn btn-small" @click="addTag('personnel', newPersonnel); newPersonnel = ''">添加</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 风险列表 -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">风险列表</label>
+                            <div class="tag-input-container">
+                                <div class="tag-list" v-if="solutionForm.risks && solutionForm.risks.length > 0">
+                                    <span class="tag tag-risk" v-for="(item, index) in solutionForm.risks" :key="index">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="removeTag('risks', index)">×</span>
+                                    </span>
+                                </div>
+                                <div class="input-row">
+                                    <input class="form-input" v-model="newRisk" @keyup.enter="addTag('risks', newRisk); newRisk = ''" placeholder="输入风险描述后按回车添加">
+                                    <button class="btn btn-small" @click="addTag('risks', newRisk); newRisk = ''">添加</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 问题列表 -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">问题列表</label>
+                            <div class="tag-input-container">
+                                <div class="tag-list" v-if="solutionForm.issues && solutionForm.issues.length > 0">
+                                    <span class="tag tag-issue" v-for="(item, index) in solutionForm.issues" :key="index">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="removeTag('issues', index)">×</span>
+                                    </span>
+                                </div>
+                                <div class="input-row">
+                                    <input class="form-input" v-model="newIssue" @keyup.enter="addTag('issues', newIssue); newIssue = ''" placeholder="输入问题描述后按回车添加">
+                                    <button class="btn btn-small" @click="addTag('issues', newIssue); newIssue = ''">添加</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 其他说明 -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">其他说明</label>
+                            <textarea class="form-textarea" v-model="solutionForm.other_notes" placeholder="其他需要说明的事项"></textarea>
+                        </div>
+                        <!-- 方案标签 -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">方案标签</label>
+                            <div class="tag-input-container">
+                                <div class="tag-list" v-if="solutionForm.tags && solutionForm.tags.length > 0">
+                                    <span class="tag tag-info" v-for="(item, index) in solutionForm.tags" :key="index">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="removeTag('tags', index)">×</span>
+                                    </span>
+                                </div>
+                                <div class="input-row">
+                                    <input class="form-input" v-model="newTag" @keyup.enter="addTag('tags', newTag); newTag = ''" placeholder="输入标签后按回车添加">
+                                    <button class="btn btn-small" @click="addTag('tags', newTag); newTag = ''">添加</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">方案描述</label>
+                            <textarea class="form-textarea" v-model="solutionForm.description" placeholder="方案的详细描述"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">负责人</label>
+                            <input class="form-input" v-model="solutionForm.owner" placeholder="方案负责人">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">创建人</label>
+                            <input class="form-input" v-model="solutionForm.created_by" placeholder="创建人">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @click="submitSolution">
+                            <span>💾</span> 保存方案
+                        </button>
+                        <button class="btn btn-secondary" @click="resetSolutionForm">
+                            <span>↺</span> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 方案列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee;">📋</div>
+                            已保存方案
+                        </div>
+                    </div>
+                    <div v-if="savedSolutions.length > 0" class="list-container">
+                        <div class="list-item" v-for="sol in savedSolutions" :key="sol.solution_id">
+                            <div class="list-item-info">
+                                <h4>{{ sol.name }} <span style="font-size: 12px; color: var(--text-secondary);">({{ sol.solution_id }})</span></h4>
+                                <p>版本: {{ sol.version }} | 优先级: {{ sol.priority }} | 负责人: {{ sol.owner || '未指定' }}</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <button class="icon-btn" @click="loadSolution(sol)" title="编辑">✎</button>
+                                <button class="icon-btn" @click="deleteSolution(sol.solution_id)" title="删除">🗑</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="empty-state">
+                        <div class="empty-state-icon">📂</div>
+                        <p>暂无已保存的方案</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 方案拆分 -->
+            <section v-if="currentView === 'decomposition'" key="decomposition">
+                <h1 class="page-title">方案拆分</h1>
+                <p class="page-desc">将方案拆分为任务、任务流组和任务图谱</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">🔀</div>
+                            拆分配置
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">选择方案</label>
+                            <select class="form-select" v-model="decompositionForm.solution_id">
+                                <option value="">请选择方案</option>
+                                <option v-for="sol in savedSolutions" :key="sol.solution_id" :value="sol.solution_id">
+                                    {{ sol.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">拆分策略</label>
+                            <select class="form-select" v-model="decompositionForm.strategy">
+                                <option value="auto">自动拆分</option>
+                                <option value="manual">手动拆分</option>
+                                <option value="hybrid">混合拆分</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @click="splitSolution" :disabled="!decompositionForm.solution_id">
+                            <span>🔀</span> 开始拆分
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 拆分结果 -->
+                <div v-if="decompositionResult" class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">✓</div>
+                            拆分结果
+                        </div>
+                    </div>
+                    <p>方案拆分完成，生成了 {{ decompositionResult.task_count }} 个任务，{{ decompositionResult.flow_group_count }} 个任务流组。</p>
+                    <div class="btn-group" style="margin-top: 16px;">
+                        <button class="btn btn-secondary" @click="switchView('display')">
+                            <span>👁</span> 查看详情
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 信息展示 -->
+            <section v-if="currentView === 'display'" key="display">
+                <h1 class="page-title">信息展示</h1>
+                <p class="page-desc">查看任务信息、任务流组信息和任务图谱信息</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">📊</div>
+                            选择方案
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-select" v-model="displaySolutionId">
+                            <option value="">请选择方案</option>
+                            <option v-for="sol in savedSolutions" :key="sol.solution_id" :value="sol.solution_id">
+                                {{ sol.name }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 任务信息 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(236, 72, 153, 0.2); color: #f472b6;">📋</div>
+                            任务信息
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>任务信息展示区域（待实现数据绑定）</p>
+                    </div>
+                </div>
+
+                <!-- 任务流组 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee;">🌊</div>
+                            任务流组信息
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🌊</div>
+                        <p>任务流组信息展示区域（待实现数据绑定）</p>
+                    </div>
+                </div>
+
+                <!-- 任务图谱 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">🕸</div>
+                            任务图谱信息
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🕸</div>
+                        <p>任务图谱可视化展示区域（待实现数据绑定）</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 仿真管理 -->
+            <section v-if="currentView === 'simulation'" key="simulation">
+                <h1 class="page-title">仿真管理</h1>
+                <p class="page-desc">启动仿真并查看仿真日志</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(79, 70, 229, 0.2); color: #818cf8;">▶</div>
+                            启动仿真
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">选择方案</label>
+                            <select class="form-select" v-model="simulationForm.solution_id">
+                                <option value="">请选择方案</option>
+                                <option v-for="sol in savedSolutions" :key="sol.solution_id" :value="sol.solution_id">
+                                    {{ sol.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">任务清单ID</label>
+                            <input class="form-input" v-model="simulationForm.manifest_id" placeholder="可选">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @click="startSimulation" :disabled="!simulationForm.solution_id || isSimulating">
+                            <span>{{ isSimulating ? '⏳' : '▶' }}</span> {{ isSimulating ? '仿真运行中...' : '启动仿真' }}
+                        </button>
+                        <button class="btn btn-error" @click="stopSimulation" :disabled="!isSimulating">
+                            <span>⏹</span> 停止仿真
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 仿真状态 -->
+                <div v-if="simulationStatus" class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee;">📡</div>
+                            仿真状态
+                        </div>
+                        <span class="status-badge" :class="'status-' + simulationStatus.status">
+                            <span>●</span> {{ simulationStatus.status === 'running' ? '运行中' : simulationStatus.status === 'completed' ? '已完成' : '已停止' }}
+                        </span>
+                    </div>
+                    <p>仿真ID: {{ simulationStatus.simulation_id }}</p>
+                    <div class="progress-container">
+                        <div class="progress-bar" :style="{ width: simulationStatus.progress + '%' }"></div>
+                    </div>
+                    <p style="text-align: center; font-size: 13px; color: var(--text-secondary);">进度: {{ simulationStatus.progress }}%</p>
+                </div>
+
+                <!-- 仿真日志 -->
+                <div v-if="simulationLogs.length > 0" class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">📜</div>
+                            仿真日志
+                        </div>
+                    </div>
+                    <div class="log-container">
+                        <div class="log-line" v-for="(log, i) in simulationLogs" :key="i">
+                            <span class="log-time">[{{ log.time }}]</span>
+                            <span :class="'log-level-' + log.level">[{{ log.level.toUpperCase() }}]</span>
+                            {{ log.message }}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 评估管理 -->
+            <section v-if="currentView === 'evaluation'" key="evaluation">
+                <h1 class="page-title">评估管理</h1>
+                <p class="page-desc">启动评估、查看结果和中止评估</p>
+
+                <div v-if="evaluationStep === 0">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(79, 70, 229, 0.2); color: #818cf8;">⚙</div>
+                                评估配置
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">选择方案</label>
+                                <select class="form-select" v-model="evaluationForm.solution_id">
+                                    <option value="">请选择方案</option>
+                                    <option v-for="sol in savedSolutions" :key="sol.solution_id" :value="sol.solution_id">
+                                        {{ sol.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">评估ID</label>
+                                <input class="form-input" v-model="evaluationForm.evaluation_id" placeholder="如：EVAL001">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label class="form-label">
+                                <input type="checkbox" v-model="evaluationForm.use_simulation_log" style="margin-right: 8px;">
+                                使用仿真日志进行评估
+                            </label>
+                        </div>
+                        <div v-if="evaluationForm.use_simulation_log" class="form-group">
+                            <label class="form-label">仿真ID</label>
+                            <input class="form-input" v-model="evaluationForm.simulation_id" placeholder="关联的仿真ID">
+                        </div>
+                    </div>
+
+                    <!-- 选择评价指标 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee;">📊</div>
+                                选择评价指标
+                            </div>
+                        </div>
+                        <div class="checkbox-list">
+                            <div
+                                class="checkbox-item"
+                                v-for="index in availableIndices"
+                                :key="index.index_id"
+                                :class="{ selected: evaluationForm.selected_indices.includes(index.index_id) }"
+                                @click="toggleIndex(index.index_id)"
+                            >
+                                <input type="checkbox" :checked="evaluationForm.selected_indices.includes(index.index_id)" @click.stop>
+                                <div class="checkbox-content">
+                                    <h4>{{ index.name }}</h4>
+                                    <p>{{ index.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 选择评估Agent -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">🤖</div>
+                                选择评估Agent
+                            </div>
+                        </div>
+                        <div class="checkbox-list">
+                            <div
+                                class="checkbox-item"
+                                v-for="agent in availableAgents"
+                                :key="agent.agent_id"
+                                :class="{ selected: isAgentSelected(agent.agent_id) }"
+                                @click="toggleAgent(agent)"
+                            >
+                                <input type="checkbox" :checked="isAgentSelected(agent.agent_id)" @click.stop>
+                                <div class="checkbox-content">
+                                    <h4>{{ agent.agent_name }}</h4>
+                                    <p>负责指标: {{ agent.index_ids.join(', ') || '通用' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @click="startEvaluation" :disabled="!canStartEvaluation">
+                            <span>▶</span> 启动评估
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 评估结果 -->
+                <div v-if="evaluationStep === 1">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">📈</div>
+                                评估结果
+                            </div>
+                            <span class="status-badge" :class="'status-' + evaluationResult.status">
+                                <span>●</span> {{ evaluationResult.status === 'running' ? '评估中' : evaluationResult.status === 'completed' ? '已完成' : evaluationResult.status === 'aborted' ? '已中止' : '待开始' }}
+                            </span>
+                        </div>
+                        <div v-if="evaluationResult.overall_score !== null">
+                            <h3 style="text-align: center; font-size: 48px; margin: 24px 0; background: linear-gradient(135deg, var(--primary-light), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                                {{ evaluationResult.overall_score }}
+                            </h3>
+                            <p style="text-align: center; color: var(--text-secondary);">总体评分</p>
+                        </div>
+                        <div v-else class="empty-state">
+                            <div class="empty-state-icon">⏳</div>
+                            <p>评估进行中，请稍候...</p>
+                        </div>
+                    </div>
+
+                    <!-- 各Agent评估结果 -->
+                    <div v-if="evaluationResult.agent_results.length > 0" class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">🤖</div>
+                                Agent评估详情
+                            </div>
+                        </div>
+                        <div class="list-container">
+                            <div class="list-item" v-for="(result, i) in evaluationResult.agent_results" :key="i">
+                                <div class="list-item-info">
+                                    <h4>{{ result.agent_name }}</h4>
+                                    <p>{{ result.conclusion }}</p>
+                                </div>
+                                <div style="font-size: 20px; font-weight: 700; color: var(--primary-light);">{{ result.score }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 改进建议 -->
+                    <div v-if="evaluationResult.recommendations.length > 0" class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-icon" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">💡</div>
+                                改进建议
+                            </div>
+                        </div>
+                        <div class="list-container">
+                            <div class="list-item" v-for="(rec, i) in evaluationResult.recommendations" :key="i" style="cursor: default;">
+                                <div class="list-item-info">
+                                    <h4>建议 {{ i + 1 }}</h4>
+                                    <p>{{ rec }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-error" @click="abortEvaluation" :disabled="evaluationResult.status !== 'running'">
+                            <span>⏹</span> 中止评估
+                        </button>
+                        <button class="btn btn-secondary" @click="evaluationStep = 0">
+                            <span>↺</span> 重新评估
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 消息提示 -->
+        <div class="toast-container">
+            <div
+                v-for="toast in toasts"
+                :key="toast.id"
+                class="toast"
+                :class="'toast-' + toast.type"
+            >
+                <div class="toast-icon">
+                    {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                </div>
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, reactive } = Vue;
+
+        createApp({
+            setup() {
+                // 导航
+                const currentView = ref('solution');
+                const navItems = [
+                    { key: 'solution', label: '方案管理' },
+                    { key: 'decomposition', label: '方案拆分' },
+                    { key: 'display', label: '信息展示' },
+                    { key: 'simulation', label: '仿真管理' },
+                    { key: 'evaluation', label: '评估管理' }
+                ];
+
+                const switchView = (view) => {
+                    currentView.value = view;
+                };
+
+                // 消息提示
+                const toasts = ref([]);
+                let toastId = 0;
+
+                const showToast = (title, message, type = 'info') => {
+                    const id = ++toastId;
+                    toasts.value.push({ id, title, message, type });
+                    setTimeout(() => {
+                        toasts.value = toasts.value.filter(t => t.id !== id);
+                    }, 3000);
+                };
+
+                // 方案管理
+                const solutionStep = ref(0);
+                const newObjective = ref('');
+                const newInitiative = ref('');
+                const newOrg = ref('');
+                const newRole = ref('');
+                const newPersonnel = ref('');
+                const newRisk = ref('');
+                const newIssue = ref('');
+                const newTag = ref('');
+
+                const solutionForm = reactive({
+                    solution_id: '',
+                    name: '',
+                    version: '1.0',
+                    priority: 'medium',
+                    purpose: '',
+                    objectives: [],
+                    initiatives: [],
+                    working_mechanism: '',
+                    organization: [],
+                    personnel: [],
+                    roles: [],
+                    work_content: '',
+                    constraints: [],
+                    risks: [],
+                    issues: [],
+                    other_notes: '',
+                    tags: [],
+                    description: '',
+                    owner: '',
+                    created_by: ''
+                });
+
+                const savedSolutions = ref([]);
+
+                const addTag = (field, value) => {
+                    if (value && value.trim() && !solutionForm[field].includes(value.trim())) {
+                        solutionForm[field].push(value.trim());
+                    }
+                };
+
+                const removeTag = (field, index) => {
+                    solutionForm[field].splice(index, 1);
+                };
+
+                const submitSolution = async () => {
+                    if (!solutionForm.solution_id || !solutionForm.name) {
+                        showToast('验证失败', '方案ID和名称为必填项', 'error');
+                        return;
+                    }
+
+                    // 组装方案对象为JSON格式
+                    const solutionData = {
+                        solution_id: solutionForm.solution_id,
+                        name: solutionForm.name,
+                        version: solutionForm.version,
+                        priority: solutionForm.priority,
+                        purpose: solutionForm.purpose,
+                        objectives: [...solutionForm.objectives],
+                        initiatives: [...solutionForm.initiatives],
+                        working_mechanism: solutionForm.working_mechanism,
+                        organization: [...solutionForm.organization],
+                        personnel: [...solutionForm.personnel],
+                        roles: [...solutionForm.roles],
+                        work_content: solutionForm.work_content,
+                        constraints: [...solutionForm.constraints],
+                        risks: [...solutionForm.risks],
+                        issues: [...solutionForm.issues],
+                        other_notes: solutionForm.other_notes,
+                        tags: [...solutionForm.tags],
+                        description: solutionForm.description,
+                        owner: solutionForm.owner,
+                        created_by: solutionForm.created_by
+                    };
+
+                    try {
+                        // 发送到后端服务
+                        const response = await fetch('/api/solution/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(solutionData)
+                        });
+
+                        if (response.ok) {
+                            // 同时保存到本地存储
+                            const existingIndex = savedSolutions.value.findIndex(s => s.solution_id === solutionForm.solution_id);
+                            if (existingIndex >= 0) {
+                                savedSolutions.value[existingIndex] = { ...solutionForm };
+                                showToast('保存成功', `方案 [${solutionForm.name}] 已更新`);
+                            } else {
+                                savedSolutions.value.push({ ...solutionForm });
+                                showToast('保存成功', `方案 [${solutionForm.name}] 已保存`);
+                            }
+                            localStorage.setItem('savedSolutions', JSON.stringify(savedSolutions.value));
+                        } else {
+                            showToast('保存失败', '服务器返回错误', 'error');
+                        }
+                    } catch (error) {
+                        console.error('保存方案失败:', error);
+                        showToast('保存失败', '网络请求失败', 'error');
+                    }
+                };
+
+                const resetSolutionForm = () => {
+                    Object.assign(solutionForm, {
+                        solution_id: '',
+                        name: '',
+                        version: '1.0',
+                        priority: 'medium',
+                        purpose: '',
+                        objectives: [],
+                        initiatives: [],
+                        working_mechanism: '',
+                        organization: [],
+                        personnel: [],
+                        roles: [],
+                        work_content: '',
+                        constraints: [],
+                        risks: [],
+                        issues: [],
+                        other_notes: '',
+                        tags: [],
+                        description: '',
+                        owner: '',
+                        created_by: ''
+                    });
+                };
+
+                const loadSolution = (sol) => {
+                    Object.assign(solutionForm, {
+                        solution_id: '',
+                        name: '',
+                        version: '1.0',
+                        priority: 'medium',
+                        purpose: '',
+                        objectives: [],
+                        initiatives: [],
+                        working_mechanism: '',
+                        organization: [],
+                        personnel: [],
+                        roles: [],
+                        work_content: '',
+                        constraints: [],
+                        risks: [],
+                        issues: [],
+                        other_notes: '',
+                        tags: [],
+                        description: '',
+                        owner: '',
+                        created_by: ''
+                    }, sol);
+                    showToast('加载成功', `已加载方案 [${sol.name}]`);
+                };
+
+                const deleteSolution = (solutionId) => {
+                    savedSolutions.value = savedSolutions.value.filter(s => s.solution_id !== solutionId);
+                    localStorage.setItem('savedSolutions', JSON.stringify(savedSolutions.value));
+                    showToast('删除成功', '方案已删除');
+                };
+
+                // 从 localStorage 恢复
+                const saved = localStorage.getItem('savedSolutions');
+                if (saved) {
+                    try {
+                        const loadedSolutions = JSON.parse(saved);
+                        // 确保每个方案都有完整的字段，处理旧数据兼容
+                        savedSolutions.value = loadedSolutions.map(sol => ({
+                            solution_id: '',
+                            name: '',
+                            version: '1.0',
+                            priority: 'medium',
+                            purpose: '',
+                            objectives: [],
+                            initiatives: [],
+                            working_mechanism: '',
+                            organization: [],
+                            personnel: [],
+                            roles: [],
+                            work_content: '',
+                            constraints: [],
+                            risks: [],
+                            issues: [],
+                            other_notes: '',
+                            tags: [],
+                            description: '',
+                            owner: '',
+                            created_by: '',
+                            ...sol
+                        }));
+                    } catch (e) {
+                        console.error('恢复方案数据失败', e);
+                    }
+                }
+
+                // 方案拆分
+                const decompositionForm = reactive({
+                    solution_id: '',
+                    strategy: 'auto'
+                });
+                const decompositionResult = ref(null);
+
+                const splitSolution = () => {
+                    if (!decompositionForm.solution_id) {
+                        showToast('提示', '请先选择方案', 'warning');
+                        return;
+                    }
+                    decompositionResult.value = {
+                        task_count: 12,
+                        flow_group_count: 3,
+                        graph_id: 'GRAPH_' + decompositionForm.solution_id
+                    };
+                    showToast('拆分完成', '方案已成功拆分', 'success');
+                };
+
+                // 信息展示
+                const displaySolutionId = ref('');
+
+                // 仿真管理
+                const simulationForm = reactive({
+                    solution_id: '',
+                    manifest_id: ''
+                });
+                const isSimulating = ref(false);
+                const simulationStatus = ref(null);
+                const simulationLogs = ref([]);
+                let simulationTimer = null;
+
+                const startSimulation = () => {
+                    if (!simulationForm.solution_id) {
+                        showToast('提示', '请先选择方案', 'warning');
+                        return;
+                    }
+
+                    isSimulating.value = true;
+                    simulationStatus.value = {
+                        simulation_id: 'SIM_' + simulationForm.solution_id + '_' + Date.now(),
+                        status: 'running',
+                        progress: 0
+                    };
+                    simulationLogs.value = [
+                        { time: new Date().toLocaleTimeString(), level: 'info', message: '仿真启动中...' },
+                        { time: new Date().toLocaleTimeString(), level: 'info', message: '加载方案配置...' },
+                        { time: new Date().toLocaleTimeString(), level: 'info', message: '初始化仿真环境...' }
+                    ];
+
+                    showToast('仿真启动', '仿真已开始运行', 'success');
+
+                    // 模拟进度更新
+                    simulationTimer = setInterval(() => {
+                        if (simulationStatus.value.progress < 100) {
+                            simulationStatus.value.progress += Math.random() * 15;
+                            if (simulationStatus.value.progress > 100) {
+                                simulationStatus.value.progress = 100;
+                                simulationStatus.value.status = 'completed';
+                                isSimulating.value = false;
+                                clearInterval(simulationTimer);
+                                simulationLogs.value.push({
+                                    time: new Date().toLocaleTimeString(),
+                                    level: 'info',
+                                    message: '仿真完成！'
+                                });
+                                showToast('仿真完成', '仿真已成功完成', 'success');
+                            } else {
+                                simulationLogs.value.push({
+                                    time: new Date().toLocaleTimeString(),
+                                    level: 'info',
+                                    message: `仿真进行中... 进度: ${Math.floor(simulationStatus.value.progress)}%`
+                                });
+                            }
+                        }
+                    }, 2000);
+                };
+
+                const stopSimulation = () => {
+                    if (simulationTimer) {
+                        clearInterval(simulationTimer);
+                    }
+                    isSimulating.value = false;
+                    if (simulationStatus.value) {
+                        simulationStatus.value.status = 'stopped';
+                    }
+                    simulationLogs.value.push({
+                        time: new Date().toLocaleTimeString(),
+                        level: 'warn',
+                        message: '仿真已手动停止'
+                    });
+                    showToast('仿真停止', '仿真已停止', 'warning');
+                };
+
+                // 评估管理
+                const evaluationStep = ref(0);
+                const evaluationForm = reactive({
+                    solution_id: '',
+                    evaluation_id: '',
+                    selected_agents: [],
+                    selected_indices: [],
+                    use_simulation_log: false,
+                    simulation_id: ''
+                });
+
+                const availableIndices = ref([
+                    { index_id: 'IDX_COMP_001', name: '目标完整性', description: '评估方案目标的完整性' },
+                    { index_id: 'IDX_COMP_002', name: '举措完整性', description: '评估方案举措的完整性' },
+                    { index_id: 'IDX_COMP_003', name: '资源完整性', description: '评估方案资源的完整性' },
+                    { index_id: 'IDX_RAT_001', name: '目标合理性', description: '评估方案目标的合理性' },
+                    { index_id: 'IDX_RAT_002', name: '举措合理性', description: '评估方案举措的合理性' },
+                    { index_id: 'IDX_SIM_001', name: '仿真结果分析', description: '基于仿真结果的分析评估' }
+                ]);
+
+                const availableAgents = ref([
+                    { agent_id: 'COMP_001', agent_name: '完整性评估Agent', index_ids: ['IDX_COMP_001', 'IDX_COMP_002', 'IDX_COMP_003'] },
+                    { agent_id: 'RAT_001', agent_name: '合理性评估Agent', index_ids: ['IDX_RAT_001', 'IDX_RAT_002'] },
+                    { agent_id: 'SIM_001', agent_name: '仿真分析Agent', index_ids: ['IDX_SIM_001'] }
+                ]);
+
+                const evaluationResult = reactive({
+                    evaluation_id: '',
+                    solution_id: '',
+                    status: 'pending',
+                    overall_score: null,
+                    agent_results: [],
+                    index_scores: [],
+                    recommendations: [],
+                    start_time: null,
+                    end_time: null
+                });
+
+                const toggleIndex = (indexId) => {
+                    const idx = evaluationForm.selected_indices.indexOf(indexId);
+                    if (idx >= 0) {
+                        evaluationForm.selected_indices.splice(idx, 1);
+                    } else {
+                        evaluationForm.selected_indices.push(indexId);
+                    }
+                };
+
+                const isAgentSelected = (agentId) => {
+                    return evaluationForm.selected_agents.some(a => a.agent_id === agentId);
+                };
+
+                const toggleAgent = (agent) => {
+                    const idx = evaluationForm.selected_agents.findIndex(a => a.agent_id === agent.agent_id);
+                    if (idx >= 0) {
+                        evaluationForm.selected_agents.splice(idx, 1);
+                    } else {
+                        evaluationForm.selected_agents.push({
+                            agent_id: agent.agent_id,
+                            agent_name: agent.agent_name,
+                            index_ids: agent.index_ids,
+                            is_selected: true
+                        });
+                    }
+                };
+
+                const canStartEvaluation = computed(() => {
+                    return evaluationForm.solution_id &&
+                           evaluationForm.evaluation_id &&
+                           evaluationForm.selected_indices.length > 0 &&
+                           evaluationForm.selected_agents.length > 0;
+                });
+
+                let evaluationTimer = null;
+
+                const startEvaluation = () => {
+                    evaluationStep.value = 1;
+                    Object.assign(evaluationResult, {
+                        evaluation_id: evaluationForm.evaluation_id,
+                        solution_id: evaluationForm.solution_id,
+                        status: 'running',
+                        overall_score: null,
+                        agent_results: [],
+                        index_scores: [],
+                        recommendations: [],
+                        start_time: new Date()
+                    });
+
+                    showToast('评估启动', '评估已开始运行', 'success');
+
+                    // 模拟评估过程
+                    evaluationTimer = setTimeout(() => {
+                        Object.assign(evaluationResult, {
+                            status: 'completed',
+                            overall_score: 87.5,
+                            agent_results: [
+                                { agent_name: '完整性评估Agent', score: 90, conclusion: '方案目标、举措和资源描述完整' },
+                                { agent_name: '合理性评估Agent', score: 85, conclusion: '方案整体合理，部分细节可优化' }
+                            ],
+                            index_scores: [
+                                { index_name: '目标完整性', score: 92 },
+                                { index_name: '举措完整性', score: 88 },
+                                { index_name: '目标合理性', score: 85 },
+                                { index_name: '举措合理性', score: 83 }
+                            ],
+                            recommendations: [
+                                '建议补充更详细的资源分配计划',
+                                '方案目标可以进一步量化',
+                                '建议增加风险应对措施的细节描述'
+                            ],
+                            end_time: new Date()
+                        });
+                        showToast('评估完成', '评估结果已生成', 'success');
+                    }, 5000);
+                };
+
+                const abortEvaluation = () => {
+                    if (evaluationTimer) {
+                        clearTimeout(evaluationTimer);
+                    }
+                    evaluationResult.status = 'aborted';
+                    evaluationResult.end_time = new Date();
+                    showToast('评估中止', '评估已中止', 'warning');
+                };
+
+                return {
+                    currentView,
+                    navItems,
+                    switchView,
+                    toasts,
+                    showToast,
+
+                    // 方案管理
+                    solutionStep,
+                    solutionForm,
+                    newObjective,
+                    newInitiative,
+                    newOrg,
+                    newRole,
+                    newPersonnel,
+                    newRisk,
+                    newIssue,
+                    newTag,
+                    savedSolutions,
+                    addTag,
+                    removeTag,
+                    submitSolution,
+                    resetSolutionForm,
+                    loadSolution,
+                    deleteSolution,
+
+                    // 方案拆分
+                    decompositionForm,
+                    decompositionResult,
+                    splitSolution,
+
+                    // 信息展示
+                    displaySolutionId,
+
+                    // 仿真管理
+                    simulationForm,
+                    isSimulating,
+                    simulationStatus,
+                    simulationLogs,
+                    startSimulation,
+                    stopSimulation,
+
+                    // 评估管理
+                    evaluationStep,
+                    evaluationForm,
+                    availableIndices,
+                    availableAgents,
+                    evaluationResult,
+                    toggleIndex,
+                    isAgentSelected,
+                    toggleAgent,
+                    canStartEvaluation,
+                    startEvaluation,
+                    abortEvaluation
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

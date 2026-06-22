@@ -1,0 +1,7 @@
+{
+    "db_type": "sqlite",
+    "db_config": {
+        "db_path": "DB/SQLite",
+        "db_name": "simulation.db"
+    }
+}

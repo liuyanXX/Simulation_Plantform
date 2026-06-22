@@ -12,7 +12,6 @@ class Priority(str, Enum):
 
 
 class TaskType(str, Enum):
-    """任务类型枚举"""
     NORMAL = "normal"
     START = "start"
     END = "end"
@@ -57,14 +56,6 @@ class Task(BaseModel):
         return json.dumps(self.model_dump(mode='json'), ensure_ascii=False, indent=2)
 
     def update_task(self, **kwargs) -> None:
-        """
-        修改任务对象的属性
-        
-        支持动态修改任务的任意属性，属性名称必须是 Task 类已定义的字段。
-        
-        :param kwargs: 要修改的属性键值对
-        :raises ValueError: 如果传入了未定义的属性名
-        """
         valid_fields = self.model_fields.keys()
         for key, value in kwargs.items():
             if key not in valid_fields:
@@ -72,6 +63,154 @@ class Task(BaseModel):
         
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def save(self) -> bool:
+        """
+        保存任务到数据库（新增或更新）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            if service.exists(self.task_id):
+                service.update(self)
+            else:
+                service.create(self)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> int:
+        """
+        从数据库删除任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 删除的记录数
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.delete(self.task_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, task_id: str) -> Optional['Task']:
+        """
+        按任务ID查询任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param task_id: 任务ID
+        :return: 任务对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.read(task_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_name(cls, task_name: str) -> List['Task']:
+        """
+        按任务名称查询任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param task_name: 任务名称
+        :return: 任务列表
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.read_all(where={"task_name": task_name})
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['Task']:
+        """
+        按条件查询任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件，如 {"execute_role": "DEV", "priority": "high"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 任务列表
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['Task']:
+        """
+        全量查询任务
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 任务列表
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, task_id: str) -> bool:
+        """
+        检查任务是否存在
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param task_id: 任务ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.exists(task_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计任务数量
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件
+        :return: 任务数量
+        """
+        from data_storage_services.sql_db_services.task_service import TaskService
+        
+        service = TaskService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
 
 
 class StartTask(Task):
@@ -100,7 +239,6 @@ class StartTask(Task):
     
     @model_validator(mode='after')
     def validate_start_task(self) -> 'StartTask':
-        """验证开始任务的约束条件"""
         if self.task_source is not None:
             raise ValueError("StartTask 不能有上一任务，task_source 必须为 None")
         
@@ -136,7 +274,6 @@ class EndTask(Task):
     
     @model_validator(mode='after')
     def validate_end_task(self) -> 'EndTask':
-        """验证结束任务的约束条件"""
         if self.task_destinations:
             raise ValueError("EndTask 不能有下一任务，task_destinations 必须为空列表")
         
@@ -178,7 +315,6 @@ class HaltTask(Task):
     
     @model_validator(mode='after')
     def validate_halt_task(self) -> 'HaltTask':
-        """验证中断任务的约束条件"""
         if self.task_destinations:
             raise ValueError("HaltTask 不能有下一任务，task_destinations 必须为空列表")
         
@@ -193,7 +329,6 @@ class HaltTask(Task):
         return self
 
 
-# 更新类型提示引用
 Task.model_rebuild()
 StartTask.model_rebuild()
 EndTask.model_rebuild()

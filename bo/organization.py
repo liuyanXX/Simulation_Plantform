@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
+import json
 
 
 class Organization(BaseModel):
@@ -7,7 +8,7 @@ class Organization(BaseModel):
     name: str = Field(description="组织名称")
     parent: Optional['Organization'] = Field(default=None, description="父组织")
     children: List['Organization'] = Field(default_factory=list, description="子组织列表")
-    workers: List[AIWorker] = Field(default_factory=list, description="组织内的员工列表")
+    workers: List['AIWorker'] = Field(default_factory=list, description="组织内的员工列表")
 
     def add_child(self, child: 'Organization') -> None:
         """添加子组织"""
@@ -21,17 +22,17 @@ class Organization(BaseModel):
             child.parent = None
             self.children.remove(child)
 
-    def add_worker(self, worker: AIWorker) -> None:
+    def add_worker(self, worker: 'AIWorker') -> None:
         """添加员工到组织"""
         if worker not in self.workers:
             self.workers.append(worker)
 
-    def remove_worker(self, worker: AIWorker) -> None:
+    def remove_worker(self, worker: 'AIWorker') -> None:
         """从组织中移除员工"""
         if worker in self.workers:
             self.workers.remove(worker)
 
-    def get_all_workers(self) -> List[AIWorker]:
+    def get_all_workers(self) -> List['AIWorker']:
         """获取组织及其所有子组织的所有员工"""
         all_workers = []
         stack = [self]
@@ -43,7 +44,7 @@ class Organization(BaseModel):
         
         return all_workers
 
-    def get_worker_by_id(self, employee_id: str) -> Optional[AIWorker]:
+    def get_worker_by_id(self, employee_id: str) -> Optional['AIWorker']:
         """根据员工工号查找员工"""
         stack = [self]
         
@@ -85,7 +86,7 @@ class Organization(BaseModel):
         """获取员工总数（包括自身和所有子组织）"""
         return len(self.get_all_workers())
 
-    def assign_task_to_worker(self, employee_id: str, task: Task) -> bool:
+    def assign_task_to_worker(self, employee_id: str, task: 'Task') -> bool:
         """给指定员工分配任务"""
         worker = self.get_worker_by_id(employee_id)
         if worker:
@@ -93,7 +94,7 @@ class Organization(BaseModel):
             return True
         return False
 
-    def find_workers_by_role(self, role: str) -> List[AIWorker]:
+    def find_workers_by_role(self, role: str) -> List['AIWorker']:
         """查找具备指定角色的所有员工"""
         all_workers = self.get_all_workers()
         return [worker for worker in all_workers if role in worker.roles]
@@ -128,6 +129,221 @@ class Organization(BaseModel):
             result += "\n" + child.__str__(indent + 1)
         
         return result
+
+    def save(self) -> bool:
+        """
+        保存组织到数据库（新增或更新）
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            if service.exists(self.org_id):
+                service.update(self)
+            else:
+                service.create(self)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> bool:
+        """
+        从数据库删除组织
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 删除成功返回True
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.delete(self.org_id) == 1
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, org_id: str) -> Optional['Organization']:
+        """
+        按组织ID查询组织
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param org_id: 组织ID
+        :return: 组织对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.read(org_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['Organization']:
+        """
+        按条件查询组织
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件，如 {"name": "研发部"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 组织列表
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['Organization']:
+        """
+        全量查询组织
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 组织列表
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_root_organizations(cls) -> List['Organization']:
+        """
+        获取根组织列表
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 根组织列表
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.get_root_organizations()
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_children(cls, org_id: str) -> List['Organization']:
+        """
+        获取子组织列表
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param org_id: 组织ID
+        :return: 子组织列表
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.get_children(org_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, org_id: str) -> bool:
+        """
+        检查组织是否存在
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param org_id: 组织ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.exists(org_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计组织数量
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param where: 查询条件
+        :return: 组织数量
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
+
+    def add_worker_to_org(self, employee_id: str) -> bool:
+        """
+        将员工添加到组织
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param employee_id: 员工ID
+        :return: 成功返回True
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.add_worker_to_org(self.org_id, employee_id)
+        finally:
+            service.disconnect()
+
+    def remove_worker_from_org(self, employee_id: str) -> bool:
+        """
+        从组织移除员工
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :param employee_id: 员工ID
+        :return: 成功返回True
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.remove_worker_from_org(self.org_id, employee_id)
+        finally:
+            service.disconnect()
+
+    def get_org_workers(self) -> List[str]:
+        """
+        获取组织的员工ID列表
+        
+        数据库配置从 db_config.json 文件读取。
+        
+        :return: 员工ID列表
+        """
+        from data_storage_services.sql_db_services.organization_service import OrganizationService
+        
+        service = OrganizationService()
+        try:
+            return service.get_org_workers(self.org_id)
+        finally:
+            service.disconnect()
 
 
 class OrganizationFactory:
@@ -231,7 +447,6 @@ class OrganizationFactory:
         return root
 
 
-# 延迟导入避免循环依赖，然后更新类型提示引用
 from .ai_worker import AIWorker
 from .task import Task
 Organization.update_forward_refs()
@@ -316,7 +531,6 @@ if __name__ == "__main__":
         print(f"- {w.name} ({w.employee_id})")
     
     print("\n=== 组织字典结构 ===")
-    import json
     print(json.dumps(org.to_dict(), ensure_ascii=False, indent=2))
     
     print("\n=== 创建层级化组织架构 ===")

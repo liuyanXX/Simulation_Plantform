@@ -16,7 +16,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/
 from bo.solution import Solution
 from bo.task import Task, TaskType, Priority
 from bo.tasks_graph import TasksGraph
-from solution_management_services.llm_client import LLMClient, LLMRequest, MockLLMClient
+from bo.task_flow_group import TaskFlowGroup
+from bo.task_manifest import TaskManifest
+from ai_modules.basic.llm_client import LLMClient, LLMRequest, LLMClientFactory
+from knowledge_management.knowledge_manager import KnowledgeManager
+from knowledge_management.models import Knowledge
 
 
 class DecompositionResult(BaseModel):
@@ -24,6 +28,8 @@ class DecompositionResult(BaseModel):
     success: bool = Field(description="是否成功")
     tasks_graph: Optional[TasksGraph] = Field(default=None, description="生成的任务图谱")
     tasks: List[Task] = Field(default_factory=list, description="生成的任务列表")
+    flow_groups: List[TaskFlowGroup] = Field(default_factory=list, description="生成的任务流组列表")
+    task_manifest: Optional[TaskManifest] = Field(default=None, description="生成的任务清单")
     raw_response: Optional[str] = Field(default=None, description="大模型原始响应")
     error_message: Optional[str] = Field(default=None, description="错误信息")
     processing_time_ms: Optional[int] = Field(default=None, description="处理时间（毫秒）")
@@ -207,13 +213,34 @@ class SolutionDecompositionService:
         self,
         llm_client: Optional[LLMClient] = None,
         storage_path: str = "tasks_graphs",
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
+        client_type: Optional[str] = None,
+        knowledge_manager: Optional[KnowledgeManager] = None
     ):
-        self._llm_client = llm_client or MockLLMClient()
+        """
+        初始化方案拆解服务
+        
+        :param llm_client: 大模型客户端（可选，默认通过工厂创建）
+        :param storage_path: 存储路径
+        :param logger: 日志记录器
+        :param client_type: 客户端类型（可选，默认从配置读取）
+        :param knowledge_manager: 知识管理器（可选，默认创建新实例）
+        """
+        if llm_client is None:
+            self._llm_client = LLMClientFactory.create_client(client_type=client_type)
+        else:
+            self._llm_client = llm_client
         self._storage_path = storage_path
         self._tasks: Dict[str, Task] = {}
         self._tasks_graphs: Dict[str, TasksGraph] = {}
         self._logger = logger or self._setup_logging()
+        self._knowledge_manager = knowledge_manager or KnowledgeManager()
+        
+        # 运行日志文件路径
+        self._run_log_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "运行日志.log"
+        )
         
         os.makedirs(self._storage_path, exist_ok=True)
         self._logger.info("方案拆解服务已初始化")
@@ -237,12 +264,13 @@ class SolutionDecompositionService:
     
     def decompose_solution(self, solution: Solution) -> DecompositionResult:
         """
-        将方案拆解为任务和任务图谱
+        将方案拆解为任务、任务流组、任务清单和任务图谱
         
-        调用大模型分析方案内容，生成结构化的任务列表和任务图谱。
+        调用大模型分析方案内容，生成结构化的任务列表和任务图谱，
+        并将提示词写入知识库，将原始方案内容和拆解结果写入运行日志。
         
         :param solution: 方案对象
-        :return: 拆解结果，包含任务列表和任务图谱
+        :return: 拆解结果，包含任务列表、任务图谱、任务流组和任务清单
         """
         import time
         start_time = time.time()
@@ -251,6 +279,12 @@ class SolutionDecompositionService:
         
         # 构建提示词
         prompt = self._build_decomposition_prompt(solution)
+        
+        # 将提示词写入知识库
+        self._save_prompt_to_knowledge(solution, prompt)
+        
+        # 记录原始方案内容到运行日志
+        self._log_solution_content(solution)
         
         # 调用大模型
         try:
@@ -270,6 +304,19 @@ class SolutionDecompositionService:
             )
             
             if tasks and tasks_graph:
+                # 从任务图谱拆分任务流组
+                flow_groups = tasks_graph.split_into_flow_groups()
+                
+                # 创建任务清单
+                task_manifest = TaskManifest(
+                    manifest_id=f"MANIFEST_{solution.solution_id}",
+                    manifest_name=f"{solution.name}任务清单",
+                    flow_groups=flow_groups,
+                    description=f"方案【{solution.name}】的任务清单",
+                    status=TaskManifest.ManifestStatus.DRAFT
+                )
+                task_manifest._solution_id = solution.solution_id
+                
                 # 保存结果
                 for task in tasks:
                     self._tasks[task.task_id] = task
@@ -278,13 +325,19 @@ class SolutionDecompositionService:
                 processing_time = int((time.time() - start_time) * 1000)
                 self._logger.info(
                     f"方案拆解完成: {solution.solution_id} -> "
-                    f"{len(tasks)}个任务, 图谱ID: {tasks_graph.graph_id}"
+                    f"{len(tasks)}个任务, {len(flow_groups)}个任务流组, "
+                    f"图谱ID: {tasks_graph.graph_id}, 清单ID: {task_manifest.manifest_id}"
                 )
+                
+                # 记录拆解结果到运行日志
+                self._log_decomposition_result(solution, tasks_graph, flow_groups, task_manifest, response.content)
                 
                 return DecompositionResult(
                     success=True,
                     tasks_graph=tasks_graph,
                     tasks=tasks,
+                    flow_groups=flow_groups,
+                    task_manifest=task_manifest,
                     raw_response=response.content,
                     processing_time_ms=processing_time
                 )
@@ -730,3 +783,612 @@ class SolutionDecompositionService:
             "role_distribution": role_counts,
             "total_resource_consumption": round(total_resource, 2)
         }
+    
+    # ========== 知识管理和日志记录 ==========
+    
+    def _save_prompt_to_knowledge(self, solution: Solution, prompt: str) -> None:
+        """
+        将提示词写入知识库
+        
+        :param solution: 方案对象
+        :param prompt: 提示词内容
+        """
+        try:
+            knowledge_id = f"KNOW_DECOMP_{solution.solution_id}"
+            
+            # 检查知识是否已存在
+            existing_knowledge = self._knowledge_manager.get_knowledge(knowledge_id)
+            
+            knowledge = Knowledge(
+                knowledge_id=knowledge_id,
+                title=f"方案拆解提示词 - {solution.name}",
+                summary=f"用于拆解方案【{solution.name}】的大模型提示词",
+                content=f"""方案拆解提示词
+
+【方案信息】
+方案ID: {solution.solution_id}
+方案名称: {solution.name}
+方案版本: {solution.version}
+
+【系统提示词】
+{self.DECOMPOSITION_SYSTEM_PROMPT}
+
+【用户提示词】
+{prompt}
+
+【生成时间】
+{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+""",
+                tags=["方案拆解", "提示词", solution.solution_id],
+                category="decomposition"
+            )
+            
+            if existing_knowledge:
+                self._knowledge_manager.update_knowledge(knowledge)
+                self._logger.info(f"更新知识库中的提示词: {knowledge_id}")
+            else:
+                self._knowledge_manager.add_knowledge(knowledge)
+                self._logger.info(f"将提示词写入知识库: {knowledge_id}")
+                
+        except Exception as e:
+            self._logger.error(f"写入知识库失败: {e}")
+    
+    def _log_solution_content(self, solution: Solution) -> None:
+        """
+        记录原始方案内容到运行日志
+        
+        :param solution: 方案对象
+        """
+        try:
+            log_content = f"""
+================================================================================
+方案拆解 - 原始方案内容
+================================================================================
+时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+方案ID: {solution.solution_id}
+方案名称: {solution.name}
+方案版本: {solution.version}
+
+【方案基本信息】
+方案目的: {solution.purpose or '未指定'}
+方案目标: {', '.join(solution.objectives) if solution.objectives else '未指定'}
+方案举措: {', '.join(solution.initiatives) if solution.initiatives else '未指定'}
+工作机制: {solution.working_mechanism or '未指定'}
+
+【组织与人员】
+涉及组织: {', '.join(solution.organization) if solution.organization else '未指定'}
+涉及人员: {', '.join(solution.personnel) if solution.personnel else '未指定'}
+涉及角色: {', '.join(solution.roles) if solution.roles else '未指定'}
+
+【工作内容】
+{solution.work_content or '未指定'}
+
+【限制条件】
+{', '.join(solution.constraints) if solution.constraints else '无'}
+
+【风险与问题】
+风险: {', '.join(solution.risks) if solution.risks else '无'}
+问题: {', '.join(solution.issues) if solution.issues else '无'}
+
+================================================================================
+"""
+            
+            with open(self._run_log_path, 'a', encoding='utf-8') as f:
+                f.write(log_content)
+                
+            self._logger.info(f"原始方案内容已记录到运行日志")
+            
+        except Exception as e:
+            self._logger.error(f"记录方案内容失败: {e}")
+    
+    def _log_decomposition_result(
+        self,
+        solution: Solution,
+        tasks_graph: TasksGraph,
+        flow_groups: List[TaskFlowGroup],
+        task_manifest: TaskManifest,
+        raw_response: str
+    ) -> None:
+        """
+        记录拆解结果到运行日志
+        
+        :param solution: 方案对象
+        :param tasks_graph: 任务图谱
+        :param flow_groups: 任务流组列表
+        :param task_manifest: 任务清单
+        :param raw_response: 大模型原始响应
+        """
+        try:
+            log_content = f"""
+================================================================================
+方案拆解 - 拆解结果
+================================================================================
+时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+方案ID: {solution.solution_id}
+方案名称: {solution.name}
+
+【任务图谱信息】
+图谱ID: {tasks_graph.graph_id}
+图谱名称: {tasks_graph.graph_name}
+图谱描述: {tasks_graph.description or '无'}
+任务总数: {len(tasks_graph.tasks)}
+
+【任务流组信息】
+任务流组数量: {len(flow_groups)}
+任务清单ID: {task_manifest.manifest_id}
+任务清单名称: {task_manifest.manifest_name}
+任务清单状态: {task_manifest.status.value}
+
+【任务流组详情】
+"""
+            
+            for i, flow_group in enumerate(flow_groups, 1):
+                log_content += f"""
+任务流组 {i}:
+  流组ID: {flow_group.flow_id}
+  流组名称: {flow_group.flow_name}
+  流组描述: {flow_group.description or '无'}
+  任务数量: {len(flow_group.tasks)}
+  任务列表: {' -> '.join([t.task_id for t in flow_group.tasks])}
+"""
+            
+            log_content += f"""
+【大模型原始响应】
+{raw_response}
+
+================================================================================
+"""
+            
+            with open(self._run_log_path, 'a', encoding='utf-8') as f:
+                f.write(log_content)
+                
+            self._logger.info(f"拆解结果已记录到运行日志")
+            
+        except Exception as e:
+            self._logger.error(f"记录拆解结果失败: {e}")
+    
+    # ========== 持久化服务 ==========
+    
+    def _get_task_service(self):
+        """获取任务服务实例"""
+        from data_storage_services.sql_db_services.task_service import TaskService
+        return TaskService()
+    
+    def _get_flow_group_service(self):
+        """获取任务流组服务实例"""
+        from data_storage_services.sql_db_services.task_flow_group_service import TaskFlowGroupService
+        return TaskFlowGroupService()
+    
+    def _get_task_manifest_service(self):
+        """获取任务清单服务实例"""
+        from data_storage_services.sql_db_services.task_manifest_service import TaskManifestService
+        return TaskManifestService()
+    
+    def _get_tasks_graph_service(self):
+        """获取任务图谱服务实例"""
+        from data_storage_services.sql_db_services.tasks_graph_service import TasksGraphService
+        return TasksGraphService()
+    
+    # --- 任务持久化服务 ---
+    
+    def save_task(self, task: Task) -> bool:
+        """
+        保存任务到数据库（新增或更新）
+        
+        :param task: 任务对象
+        :return: 保存成功返回True
+        """
+        try:
+            service = self._get_task_service()
+            try:
+                if service.exists(task.task_id):
+                    service.update(task)
+                    self._logger.info(f"更新任务: {task.task_id}")
+                else:
+                    service.create(task)
+                    self._logger.info(f"保存任务: {task.task_id}")
+                return True
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"保存任务失败: {e}")
+            return False
+    
+    def save_all_tasks(self) -> int:
+        """
+        保存所有任务到数据库
+        
+        :return: 保存的任务数量
+        """
+        count = 0
+        for task in self._tasks.values():
+            if self.save_task(task):
+                count += 1
+        self._logger.info(f"保存所有任务完成: {count}/{len(self._tasks)}")
+        return count
+    
+    def get_task_from_db(self, task_id: str) -> Optional[Task]:
+        """
+        从数据库获取任务
+        
+        :param task_id: 任务ID
+        :return: 任务对象，如果不存在返回None
+        """
+        try:
+            service = self._get_task_service()
+            try:
+                task = service.read(task_id)
+                if task:
+                    self._tasks[task.task_id] = task
+                return task
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务失败: {e}")
+            return None
+    
+    def delete_task_from_db(self, task_id: str) -> bool:
+        """
+        从数据库删除任务
+        
+        :param task_id: 任务ID
+        :return: 删除成功返回True
+        """
+        try:
+            service = self._get_task_service()
+            try:
+                result = service.delete(task_id)
+                if task_id in self._tasks:
+                    del self._tasks[task_id]
+                self._logger.info(f"删除任务: {task_id}")
+                return result
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"删除任务失败: {e}")
+            return False
+    
+    # --- 任务流组持久化服务 ---
+    
+    def save_flow_group(self, flow_group: TaskFlowGroup, manifest_id: str = None) -> bool:
+        """
+        保存任务流组到数据库（新增或更新）
+        
+        :param flow_group: 任务流组对象
+        :param manifest_id: 任务清单ID
+        :return: 保存成功返回True
+        """
+        try:
+            service = self._get_flow_group_service()
+            try:
+                flow_group._manifest_id = manifest_id
+                if service.exists(flow_group.flow_id):
+                    service.update(flow_group)
+                    self._logger.info(f"更新任务流组: {flow_group.flow_id}")
+                else:
+                    service.create_with_tasks(flow_group, manifest_id)
+                    self._logger.info(f"保存任务流组: {flow_group.flow_id}")
+                return True
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"保存任务流组失败: {e}")
+            return False
+    
+    def get_flow_group_from_db(self, flow_id: str) -> Optional[TaskFlowGroup]:
+        """
+        从数据库获取任务流组（包含任务列表）
+        
+        :param flow_id: 任务流组ID
+        :return: 任务流组对象，如果不存在返回None
+        """
+        try:
+            service = self._get_flow_group_service()
+            try:
+                flow_group = service.read_with_tasks(flow_id)
+                return flow_group
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务流组失败: {e}")
+            return None
+    
+    def delete_flow_group_from_db(self, flow_id: str) -> int:
+        """
+        从数据库删除任务流组及其所有任务
+        
+        :param flow_id: 任务流组ID
+        :return: 删除的任务数量
+        """
+        try:
+            service = self._get_flow_group_service()
+            try:
+                result = service.delete_with_tasks(flow_id)
+                self._logger.info(f"删除任务流组: {flow_id}")
+                return result
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"删除任务流组失败: {e}")
+            return 0
+    
+    def list_flow_groups_from_db(self) -> List[TaskFlowGroup]:
+        """
+        从数据库获取所有任务流组
+        
+        :return: 任务流组列表
+        """
+        try:
+            service = self._get_flow_group_service()
+            try:
+                return service.read_all()
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务流组列表失败: {e}")
+            return []
+    
+    # --- 任务清单持久化服务 ---
+    
+    def save_task_manifest(self, manifest: TaskManifest, solution_id: str = None) -> bool:
+        """
+        保存任务清单到数据库（新增或更新）
+        
+        :param manifest: 任务清单对象
+        :param solution_id: 方案ID
+        :return: 保存成功返回True
+        """
+        try:
+            service = self._get_task_manifest_service()
+            try:
+                manifest._solution_id = solution_id
+                if service.exists(manifest.manifest_id):
+                    service.update(manifest)
+                    self._logger.info(f"更新任务清单: {manifest.manifest_id}")
+                else:
+                    service.create_with_flow_groups(manifest, solution_id)
+                    self._logger.info(f"保存任务清单: {manifest.manifest_id}")
+                return True
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"保存任务清单失败: {e}")
+            return False
+    
+    def get_task_manifest_from_db(self, manifest_id: str) -> Optional[TaskManifest]:
+        """
+        从数据库获取任务清单（包含任务流组和任务列表）
+        
+        :param manifest_id: 任务清单ID
+        :return: 任务清单对象，如果不存在返回None
+        """
+        try:
+            service = self._get_task_manifest_service()
+            try:
+                return service.read_with_flow_groups(manifest_id)
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务清单失败: {e}")
+            return None
+    
+    def delete_task_manifest_from_db(self, manifest_id: str) -> int:
+        """
+        从数据库删除任务清单及其所有任务流组和任务
+        
+        :param manifest_id: 任务清单ID
+        :return: 删除的任务流组数量
+        """
+        try:
+            service = self._get_task_manifest_service()
+            try:
+                result = service.delete_with_flow_groups(manifest_id)
+                self._logger.info(f"删除任务清单: {manifest_id}")
+                return result
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"删除任务清单失败: {e}")
+            return 0
+    
+    def list_task_manifests_from_db(self) -> List[TaskManifest]:
+        """
+        从数据库获取所有任务清单
+        
+        :return: 任务清单列表
+        """
+        try:
+            service = self._get_task_manifest_service()
+            try:
+                return service.read_all()
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务清单列表失败: {e}")
+            return []
+    
+    # --- 任务图谱持久化服务 ---
+    
+    def save_tasks_graph_to_db(self, graph: TasksGraph, manifest_id: str = None) -> bool:
+        """
+        保存任务图谱到数据库（新增或更新）
+        
+        :param graph: 任务图谱对象
+        :param manifest_id: 任务清单ID
+        :return: 保存成功返回True
+        """
+        try:
+            service = self._get_tasks_graph_service()
+            try:
+                graph._manifest_id = manifest_id
+                if service.exists(graph.graph_id):
+                    service.update(graph)
+                    self._logger.info(f"更新任务图谱: {graph.graph_id}")
+                else:
+                    service.create_with_tasks(graph, manifest_id)
+                    self._logger.info(f"保存任务图谱: {graph.graph_id}")
+                return True
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"保存任务图谱失败: {e}")
+            return False
+    
+    def get_tasks_graph_from_db(self, graph_id: str) -> Optional[TasksGraph]:
+        """
+        从数据库获取任务图谱（包含任务列表）
+        
+        :param graph_id: 任务图谱ID
+        :return: 任务图谱对象，如果不存在返回None
+        """
+        try:
+            service = self._get_tasks_graph_service()
+            try:
+                graph = service.read_with_tasks(graph_id)
+                if graph:
+                    self._tasks_graphs[graph.graph_id] = graph
+                    for task in graph.tasks:
+                        self._tasks[task.task_id] = task
+                return graph
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务图谱失败: {e}")
+            return None
+    
+    def delete_tasks_graph_from_db(self, graph_id: str) -> int:
+        """
+        从数据库删除任务图谱及其所有任务
+        
+        :param graph_id: 任务图谱ID
+        :return: 删除的任务数量
+        """
+        try:
+            service = self._get_tasks_graph_service()
+            try:
+                result = service.delete_with_tasks(graph_id)
+                if graph_id in self._tasks_graphs:
+                    del self._tasks_graphs[graph_id]
+                self._logger.info(f"删除任务图谱: {graph_id}")
+                return result
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"删除任务图谱失败: {e}")
+            return 0
+    
+    def list_tasks_graphs_from_db(self) -> List[TasksGraph]:
+        """
+        从数据库获取所有任务图谱
+        
+        :return: 任务图谱列表
+        """
+        try:
+            service = self._get_tasks_graph_service()
+            try:
+                return service.read_all()
+            finally:
+                service.disconnect()
+        except Exception as e:
+            self._logger.error(f"获取任务图谱列表失败: {e}")
+            return []
+    
+    # --- 批量操作服务 ---
+    
+    def save_decomposition_result(self, result: DecompositionResult) -> bool:
+        """
+        保存方案拆解结果到数据库
+        
+        将任务图谱、任务流组、任务清单和所有任务保存到数据库。
+        
+        :param result: 方案拆解结果
+        :return: 保存成功返回True
+        """
+        if not result.success:
+            self._logger.warning("拆解结果不成功，跳过保存")
+            return False
+        
+        try:
+            success = True
+            
+            # 1. 保存任务清单（会级联保存任务流组和任务）
+            if result.task_manifest:
+                manifest_id = getattr(result.task_manifest, '_solution_id', None)
+                if not self.save_task_manifest(result.task_manifest, manifest_id):
+                    success = False
+                    self._logger.error("保存任务清单失败")
+            
+            # 2. 保存任务图谱（会级联保存任务）
+            if result.tasks_graph:
+                if not self.save_tasks_graph_to_db(result.tasks_graph):
+                    success = False
+                    self._logger.error("保存任务图谱失败")
+            
+            # 3. 直接保存所有任务（以防遗漏）
+            for task in result.tasks:
+                if task.task_id not in self._tasks:
+                    if not self.save_task(task):
+                        self._logger.warning(f"保存任务失败: {task.task_id}")
+            
+            if success:
+                self._logger.info(f"方案拆解结果保存成功")
+            return success
+            
+        except Exception as e:
+            self._logger.error(f"保存方案拆解结果失败: {e}")
+            return False
+    
+    def load_decomposition_from_db(self, manifest_id: str = None, graph_id: str = None) -> Optional[DecompositionResult]:
+        """
+        从数据库加载方案拆解结果
+        
+        :param manifest_id: 任务清单ID（优先）
+        :param graph_id: 任务图谱ID（当manifest_id为None时使用）
+        :return: 方案拆解结果，如果不不存在返回None
+        """
+        try:
+            result = DecompositionResult(success=False)
+            
+            if manifest_id:
+                # 从任务清单加载
+                manifest = self.get_task_manifest_from_db(manifest_id)
+                if manifest:
+                    result.success = True
+                    result.task_manifest = manifest
+                    result.flow_groups = manifest.flow_groups
+                    result.tasks = manifest.get_all_tasks()
+                    
+                    # 获取第一个图谱作为代表（如果有）
+                    if manifest.flow_groups:
+                        graph_id = f"GRAPH_{manifest_id}"
+                        graph = self.get_tasks_graph_from_db(graph_id)
+                        if graph:
+                            result.tasks_graph = graph
+                    
+                    self._logger.info(f"从数据库加载任务清单: {manifest_id}")
+                    return result
+            
+            if graph_id:
+                # 从任务图谱加载
+                graph = self.get_tasks_graph_from_db(graph_id)
+                if graph:
+                    result.success = True
+                    result.tasks_graph = graph
+                    result.tasks = graph.tasks
+                    result.flow_groups = graph.split_into_flow_groups()
+                    
+                    # 创建任务清单
+                    manifest_id = f"MANIFEST_{graph_id.replace('GRAPH_', '')}"
+                    manifest = self.get_task_manifest_from_db(manifest_id)
+                    if manifest:
+                        result.task_manifest = manifest
+                    
+                    self._logger.info(f"从数据库加载任务图谱: {graph_id}")
+                    return result
+            
+            self._logger.warning(f"未找到指定的清单或图谱: manifest_id={manifest_id}, graph_id={graph_id}")
+            return result
+            
+        except Exception as e:
+            self._logger.error(f"从数据库加载方案拆解结果失败: {e}")
+            return None
