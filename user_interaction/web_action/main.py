@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from user_interaction.web_action.models import ApiResponse, PageResponse
-from user_interaction.web_action.routers import solution, decomposition, simulation, evaluation, display
+from user_interaction.web_action.routers import solution, decomposition, simulation, evaluation, display, knowledge
 
 # 创建FastAPI应用实例
 app = FastAPI(
@@ -42,6 +42,7 @@ app.include_router(decomposition.router, prefix="/api/decomposition", tags=["方
 app.include_router(simulation.router, prefix="/api/simulation", tags=["仿真管理"])
 app.include_router(evaluation.router, prefix="/api/evaluation", tags=["评估管理"])
 app.include_router(display.router, prefix="/api/display", tags=["信息展示"])
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["知识管理"])
 
 
 @app.get("/", response_class=HTMLResponse)
