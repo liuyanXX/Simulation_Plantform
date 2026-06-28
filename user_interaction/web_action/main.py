@@ -1,33 +1,48 @@
-"""用户Web端服务子模块 - FastAPI主应用
+# -*- coding: utf-8 -*-
+"""仿真平台 - 用户交互模块（Web 端 FastAPI 主入口）。
 
-为Web端用户界面提供RESTful API服务。
-遵循面向对象设计原则和微服务设计原则。
+职责：
+  - 挂载各业务子模块的 API 路由（/api/solution、/api/decomposition 等）。
+  - 挂载静态资源：web_front 前端目录下的 css / js / modules。
+  - 提供根路径 "/" 返回 web_front/index.html，作为首页框架。
+  - 提供轻量的内部 _build_html_page 用于少数 fallback 页面（如 /page_not_found、/admin）。
+    该函数仅用于后端兜底；前端 UI 已迁移至 web_front，因此不再内联大段 HTML。
+
+编码说明：
+  历史版本使用 GBK(CP936) 中文字面量，并包含内联大段 HTML 字符串（_build_html_page）。
+  现统一改为 UTF-8 + UTF-8 中文/英文，并保留 `# -*- coding: utf-8 -*-` 作为默认解码提示。
 """
 
 import os
 import sys
-from datetime import datetime
-from typing import Optional, Dict, Any
+from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from user_interaction.web_action.models import ApiResponse, PageResponse
-from user_interaction.web_action.routers import solution, decomposition, simulation, evaluation, display, knowledge
+_THIS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
+_ROOT_DIR = _THIS_DIR.parent.parent
+sys.path.insert(0, str(_ROOT_DIR))
 
-# 创建FastAPI应用实例
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
+
 app = FastAPI(
-    title="仿真平台用户交互服务",
-    description="为Web端用户界面提供API服务的FastAPI应用",
-    version="1.0.0"
+    title="仿真平台 - 用户交互服务",
+    description="仿真平台 Web 端用户交互与管理服务（FastAPI）",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
-# 配置CORS中间件
+
+# 跨域（便于前端直接开发调试）
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,148 +51,137 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
+
+# 业务路由挂载
+from user_interaction.web_action.routers import (
+    solution,
+    decomposition,
+    display,
+    simulation,
+    evaluation,
+    knowledge,
+    system,
+)
+
 app.include_router(solution.router, prefix="/api/solution", tags=["方案管理"])
 app.include_router(decomposition.router, prefix="/api/decomposition", tags=["方案拆分"])
+app.include_router(display.router, prefix="/api/display", tags=["信息展示"])
 app.include_router(simulation.router, prefix="/api/simulation", tags=["仿真管理"])
 app.include_router(evaluation.router, prefix="/api/evaluation", tags=["评估管理"])
-app.include_router(display.router, prefix="/api/display", tags=["信息展示"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["知识管理"])
+app.include_router(system.router, prefix="/api/system", tags=["系统管理"])
+
+
+# 前端静态资源
+_web_front_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web_front")
+if os.path.isdir(_web_front_dir):
+    app.mount("/css",     StaticFiles(directory=os.path.join(_web_front_dir, "css")),     name="web_front_css")
+    app.mount("/js",      StaticFiles(directory=os.path.join(_web_front_dir, "js")),      name="web_front_js")
+    app.mount("/modules", StaticFiles(directory=os.path.join(_web_front_dir, "modules")), name="web_front_modules")
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    """根路径 - 返回前端页面"""
-    index_path = os.path.join(os.path.dirname(__file__), "..", "web_front", "index.html")
-    try:
-        with open(index_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return _build_html_page(
-            PageResponse(
-                title="页面未找到",
-                message="前端页面文件不存在",
-                status="error",
-                detail=f"请确保文件存在: {index_path}"
-            )
-        )
+async def index():
+    """返回首页框架（web_front/index.html）。"""
+    index_path = os.path.join(_web_front_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return _build_html_page(
+        title="页面未找到",
+        message="前端首页文件不存在，请确认部署完整性。",
+        status="error",
+        detail=f"web_front 目录: {_web_front_dir}",
+    )
+
+
+@app.get("/page_not_found", response_class=HTMLResponse)
+async def page_not_found():
+    return _build_html_page(
+        title="页面未找到",
+        message="您访问的页面不存在，已返回首页。",
+        status="warn",
+        detail="",
+    )
 
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin():
-    """管理页面 - 返回服务状态页面"""
     return _build_html_page(
-        PageResponse(
-            title="仿真平台用户交互服务",
-            message="服务运行正常",
-            status="success",
-            detail=f"当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        title="管理页面",
+        message="管理服务正在启动中，稍后刷新页面重试。",
+        status="ok",
+        detail="",
     )
 
 
-@app.get("/api/health")
-async def health_check():
-    """健康检查接口"""
-    return ApiResponse(
-        success=True,
-        code=200,
-        message="服务健康",
-        data={
-            "service": "user_interaction",
-            "status": "running",
-            "timestamp": datetime.now().isoformat()
-        }
-    )
+def _build_html_page(title="", message="", status="ok", detail=""):
+    """构造一个简单的内部 fallback 页面。
 
-
-def _build_html_page(page: PageResponse) -> str:
-    """构建HTML页面"""
-    status_color = {
-        "success": "#2ecc71",
-        "error": "#e74c3c",
-        "warning": "#f39c12",
-        "info": "#3498db"
-    }.get(page.status, "#3498db")
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{page.title}</title>
-        <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-                min-height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                color: #fff;
-            }}
-            .container {{
-                text-align: center;
-                padding: 40px;
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 20px;
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 600px;
-                width: 90%;
-            }}
-            .status-icon {{
-                width: 80px;
-                height: 80px;
-                margin: 0 auto 24px;
-                border-radius: 50%;
-                background: {status_color};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 40px;
-            }}
-            h1 {{ font-size: 28px; margin-bottom: 16px; font-weight: 600; }}
-            .message {{ font-size: 18px; margin-bottom: 12px; opacity: 0.9; }}
-            .detail {{ font-size: 14px; opacity: 0.7; margin-top: 16px; }}
-            .api-links {{
-                margin-top: 24px;
-                padding-top: 24px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-            }}
-            .api-links a {{
-                display: inline-block;
-                margin: 8px;
-                padding: 8px 16px;
-                background: rgba(255, 255, 255, 0.1);
-                color: #fff;
-                text-decoration: none;
-                border-radius: 8px;
-                font-size: 14px;
-                transition: background 0.3s;
-            }}
-            .api-links a:hover {{ background: rgba(255, 255, 255, 0.2); }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="status-icon">{'✓' if page.status == 'success' else '!'}</div>
-            <h1>{page.title}</h1>
-            <p class="message">{page.message}</p>
-            {f'<p class="detail">{page.detail}</p>' if page.detail else ''}
-            <div class="api-links">
-                <a href="/api/health">健康检查</a>
-                <a href="/docs">API文档</a>
-            </div>
-        </div>
-    </body>
-    </html>
+    注意：前端主 UI 已迁移至 web_front，因此这里只返回一个简洁的内部提示页。
+    参数与历史版本保持兼容（title/message/status/detail）。
     """
-    return html
+    status_icon_map = {
+        "ok":      "<div class='status-icon'>✓</div>",
+        "success": "<div class='status-icon'>✓</div>",
+        "warn":    "<div class='status-icon'>⚠</div>",
+        "error":   "<div class='status-icon'>✕</div>",
+    }
+    status_css_map = {
+        "ok":      "#10b981",
+        "success": "#10b981",
+        "warn":    "#f59e0b",
+        "error":   "#ef4444",
+    }
+    icon_html = status_icon_map.get((status or "ok").lower(), "<div class='status-icon'>!</div>")
+    color     = status_css_map.get((status or "ok").lower(), "#10b981")
+
+    safe_title  = (title  or "").replace('"', "&quot;")
+    safe_msg    = (message or "").replace('"', "&quot;")
+    safe_detail = (detail or "").replace('"', "&quot;")
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{safe_title or '提示'}</title>
+    <style>
+        body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+               background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
+        .card {{ padding: 40px; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+                 max-width: 520px; width: 100%; box-sizing: border-box; }}
+        h1 {{ margin: 0 0 8px; color: #1e293b; font-size: 22px; }}
+        .status-icon {{ display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+                        border-radius: 50%; margin-right: 8px; color: #fff; background: {color};
+                        font-size: 18px; font-weight: 700; line-height: 1; float: left; }}
+        .header {{ display: flex; align-items: center; margin-bottom: 16px; }}
+        .message {{ font-size: 14px; color: #475569; margin-bottom: 12px; white-space: pre-wrap; }}
+        .detail  {{ font-size: 12px; color: #94a3b8; white-space: pre-wrap; word-break: break-all; }}
+        a.back {{ display: inline-block; margin-top: 20px; color: #4f46e5; text-decoration: none; font-size: 13px; }}
+        a.back:hover {{ text-decoration: underline; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            {icon_html}
+            <h1>{safe_title or '提示'}</h1>
+        </div>
+        <div class="message">{safe_msg}</div>
+        {f'<div class="detail">{safe_detail}</div>' if safe_detail else ''}
+        <a class="back" href="/">返回首页</a>
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html, status_code=200)
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    uvicorn.run(
+        "user_interaction.web_action.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+    )

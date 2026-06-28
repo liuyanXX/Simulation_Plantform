@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 方案管理</title>
+    <link rel="stylesheet" href="../css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+        <main class="main-container">
+
+            <!-- 方案管理 -->
+            <section key="solution">
+
+                <h1 class="page-title">方案管理</h1>
+                <p class="page-desc">管理方案文档对象，支持查看、上传和删除</p>
+
+                <!-- 操作栏 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(79, 70, 229, 0.2); color: #818cf8;">📋</div>
+                            方案文档列表
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" @click="showUploadModal = true">
+                                <span>📤</span> 方案上传
+                            </button>
+                            <button class="btn btn-danger" @click="batchDeleteSolutions" :disabled="selectedSolutionIds.length === 0">
+                                <span>🗑️</span> 批量删除 ({{ selectedSolutionIds.length }})
+                            </button>
+                            <div class="pagination-size">
+                                <label>每页:</label>
+                                <select v-model="solutionPageSize" @change="solutionCurrentPage = 1">
+                                    <option :value="5">5</option>
+                                    <option :value="10">10</option>
+                                    <option :value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-container">
+                        <div
+                            v-for="doc in pagedSolutionDocuments"
+                            :key="doc.document_id"
+                            class="list-item"
+                            :class="{ selected: selectedSolutionIds.includes(doc.document_id) }"
+                        >
+                            <div class="list-item-main" @click="toggleSolutionSelection(doc.document_id)">
+                                <div class="checkbox" :class="{ checked: selectedSolutionIds.includes(doc.document_id) }">
+                                    <span v-if="selectedSolutionIds.includes(doc.document_id)">✓</span>
+                                </div>
+                                <div class="item-icon">📄</div>
+                                <div class="item-content">
+                                    <div class="item-title">{{ doc.document_name }}</div>
+                                    <div class="item-sub">
+                                        <span class="tag tag-sm">{{ doc.document_type }}</span>
+                                        <span v-if="doc.file_count !== undefined" class="tag tag-sm" style="background:rgba(6,182,212,0.15);color:#22d3ee;">📎 文件数 {{ doc.file_count || 0 }}</span>
+                                        <span v-if="doc.status" class="tag tag-sm" :class="'tag-' + (doc.status==='completed'?'success':doc.status==='processing'?'warning':'info')">
+                                            {{ doc.status === 'completed' ? '已理解' : doc.status === 'processing' ? '理解中' : '待理解' }}
+                                        </span>
+                                        <span class="meta-sm">版本 {{ doc.version || 1 }} · 创建 {{ formatDateTime(doc.created_at) }}</span>
+                                    </div>
+                                    <div class="item-tags" v-if="doc.tags && doc.tags.length">
+                                        <span v-for="(t, i) in doc.tags" :key="i" class="tag tag-sm">{{ t }}</span>
+                                    </div>
+                                    <div class="item-meta" v-if="doc.description">{{ doc.description }}</div>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm" @click.stop="viewDocumentDetail(doc.document_id)">详情</button>
+                                <button class="btn btn-sm" @click.stop="deleteSolutionDocument(doc.document_id)">删除</button>
+                            </div>
+                        </div>
+
+                        <div v-if="solutionDocuments.length === 0" class="empty-state">
+                            <div style="font-size: 48px;">📭</div>
+                            <p>暂无方案文档，点击"方案上传"开始吧</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" v-if="solutionDocuments.length > 0">
+                        <button class="page-btn" :disabled="solutionCurrentPage === 1" @click="solutionCurrentPage--">上一页</button>
+                        <span class="page-info">{{ solutionCurrentPage }} / {{ solutionTotalPages }}</span>
+                        <button class="page-btn" :disabled="solutionCurrentPage === solutionTotalPages" @click="solutionCurrentPage++">下一页</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 上传弹窗 -->
+            <div v-if="showUploadModal" class="modal-overlay" @click.self="showUploadModal = false">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>方案文档上传</h3>
+                        <button class="modal-close" @click="showUploadModal = false">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <div class="form-label">文档名称 *</div>
+                                <input class="form-input" v-model="uploadForm.name" placeholder="例如：某任务整体方案">
+                            </div>
+                            <div class="form-group">
+                                <div class="form-label">文档类型 *</div>
+                                <select class="form-input" v-model="uploadForm.type">
+                                    <option value="structured">结构化方案</option>
+                                    <option value="unstructured">非结构化文档</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-label">版本号</div>
+                                <input class="form-input" v-model="uploadForm.version" placeholder="默认 1">
+                            </div>
+                            <div class="form-group">
+                                <div class="form-label">文档来源</div>
+                                <input class="form-input" v-model="uploadForm.source" placeholder="例如：某部门">
+                            </div>
+                            <div class="form-group full-width">
+                                <div class="form-label">标签</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(tag, i) in uploadForm.tags" :key="i">
+                                        {{ tag }}
+                                        <span class="tag-remove" @click="uploadForm.tags.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newUploadTag" @keydown.enter.prevent="uploadForm.tags.push(newUploadTag); newUploadTag = ''" placeholder="输入标签后按回车">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <div class="form-label">备注说明</div>
+                                <textarea class="form-input" v-model="uploadForm.description" rows="2" placeholder="选填"></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <div class="form-label">上传文件 *</div>
+                                <input id="file-input-document" type="file"
+                                       style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);"
+                                       @change="handleDocumentSelect" multiple />
+                                <div class="upload-area" tabindex="0" role="button" aria-label="点击选择文件"
+                                     @click="openFilePicker('file-input-document')"
+                                     @dragover.prevent @drop.prevent="handleDocumentDrop">
+                                    <div style="font-size:48px;margin-bottom:16px;">📤</div>
+                                    <p>点击或拖拽文件到此处上传</p>
+                                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">支持多种格式文件</p>
+                                </div>
+                                <div v-if="uploadForm.files.length > 0" class="upload-list">
+                                    <div v-for="(f, i) in uploadForm.files" :key="i" class="upload-item">
+                                        <span class="file-icon">📄</span>
+                                        <span>{{ f.name }} ({{ formatFileSize(f.size) }})</span>
+                                        <span class="upload-remove" @click="uploadForm.files.splice(i, 1)">×</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showUploadModal = false">取消</button>
+                        <button class="btn btn-primary" @click="uploadDocument" :disabled="!canUploadDocument || uploadInProgress">
+                            <span v-if="uploadInProgress">上传中...</span>
+                            <span v-else>📤 上传</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文档详情弹窗 -->
+            <div v-if="showDocumentDetail" class="modal-overlay" @click.self="showDocumentDetail = false">
+                <div class="modal-content" style="max-width:800px;">
+                    <div class="modal-header">
+                        <h3>方案文档详情</h3>
+                        <button class="modal-close" @click="showDocumentDetail = false">×</button>
+                    </div>
+                    <div class="modal-body" v-if="currentDocument">
+                        <div class="detail-section">
+                            <div class="detail-row"><div class="detail-label">文档编号</div><div class="detail-value">{{ currentDocument.document_id }}</div></div>
+                            <div class="detail-row"><div class="detail-label">文档名称</div><div class="detail-value">{{ currentDocument.document_name }}</div></div>
+                            <div class="detail-row"><div class="detail-label">文档类型</div><div class="detail-value">
+                                <span class="tag tag-sm">{{ currentDocument.document_type }}</span>
+                                <span v-if="currentDocument.status" class="tag tag-sm" :class="'tag-' + (currentDocument.status==='completed'?'success':currentDocument.status==='processing'?'warning':'info')">
+                                    {{ currentDocument.status === 'completed' ? '已理解' : currentDocument.status === 'processing' ? '理解中' : '待理解' }}
+                                </span>
+                            </div></div>
+                            <div class="detail-row"><div class="detail-label">版本</div><div class="detail-value">{{ currentDocument.version || 1 }}</div></div>
+                            <div class="detail-row"><div class="detail-label">文件数</div><div class="detail-value">{{ currentDocument.file_count || 0 }}</div></div>
+                            <div class="detail-row"><div class="detail-label">来源</div><div class="detail-value">{{ currentDocument.source || '-' }}</div></div>
+                            <div class="detail-row" v-if="currentDocument.tags && currentDocument.tags.length"><div class="detail-label">标签</div><div class="detail-value">
+                                <span v-for="(t,i) in currentDocument.tags" :key="i" class="tag tag-sm">{{ t }}</span>
+                            </div></div>
+                            <div class="detail-row"><div class="detail-label">创建时间</div><div class="detail-value">{{ formatDateTime(currentDocument.created_at) }}</div></div>
+                            <div class="detail-row"><div class="detail-label">修改时间</div><div class="detail-value">{{ formatDateTime(currentDocument.updated_at) }}</div></div>
+                            <div class="detail-row" v-if="currentDocument.description"><div class="detail-label">备注</div><div class="detail-value">{{ currentDocument.description }}</div></div>
+                        </div>
+
+                        <div v-if="currentDocument.files && currentDocument.files.length > 0" class="detail-section">
+                            <div class="detail-label" style="font-size:16px;margin-bottom:12px;">📎 文件清单 ({{ currentDocument.files.length }})</div>
+                            <div class="list-container">
+                                <div v-for="f in currentDocument.files" :key="f.file_id" class="list-item">
+                                    <div class="item-content">
+                                        <div class="item-title">{{ f.file_name }}</div>
+                                        <div class="item-sub">
+                                            <span class="tag tag-sm">{{ f.file_type || '-' }}</span>
+                                            <span class="tag tag-sm">{{ formatFileSize(f.file_size || 0) }}</span>
+                                            <span class="meta-sm">{{ formatDateTime(f.uploaded_at) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="item-actions">
+                                        <button class="btn btn-sm" @click="downloadSingleFile(f.file_id, f.file_name)">下载</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            <div class="toast-container">
+                <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="toast"
+                    :class="'toast-' + toast.type"
+                >
+                    <div class="toast-icon">
+                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/solution.js"></script>
+
+</body>
+
+</html>

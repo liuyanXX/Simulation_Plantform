@@ -16,6 +16,14 @@ class DocumentType(str, Enum):
     REFERENCE = "reference"
 
 
+class UnderstandingStatus(str, Enum):
+    """文档理解状态枚举"""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    UNDERSTOOD = "understood"
+    FAILED = "failed"
+
+
 class SolutionStatus(str, Enum):
     """方案状态枚举"""
     DRAFT = "draft"
@@ -39,48 +47,52 @@ class SolutionDocument(BaseModel):
     """
     方案文档对象类
     
-    用于描述一个业务方案文档，包含文档的基本信息和内容。
+    用于描述一个业务方案文档，包含文档的基本信息和一个或多个方案文件。
     
     :param document_id: 文档唯一标识
-    :param file_name: 文件名
+    :param file_name: 文档名称（主文档名称）
     :param version: 版本号
     :param document_type: 文档类型（主文档/附件/参考文档）
-    :param file_content: 文件对象（二进制内容或文件路径）
-    :param text_content: 纯文本格式内容描述
     :param description: 文档描述
-    :param format: 文件格式（如 PDF、Word、Markdown 等）
-    :param size: 文件大小（字节）
     :param created_by: 创建人
     :param created_at: 创建时间
     :param updated_at: 更新时间
     :param related_solution_ids: 关联的方案对象ID列表
+    :param understanding_status: 文档理解状态
     :param metadata: 文档元数据（可选扩展信息）
+    :param files: 包含的方案文件对象列表
     
     示例用法：
         doc = SolutionDocument(
             document_id="DOC001",
-            file_name="项目实施方案.docx",
+            file_name="项目实施方案",
             version="1.0",
             document_type="main",
-            text_content="项目实施方案的完整内容...",
-            format="docx",
-            related_solution_ids=["SOL001"]
+            description="项目实施方案的完整文档集合"
         )
+        
+        file1 = SolutionFile(
+            file_id="FILE001",
+            file_name="项目实施方案.docx",
+            version="1.0",
+            file_type="main",
+            text_content="项目实施方案的完整内容...",
+            format="docx"
+        )
+        doc.add_file(file1)
     """
     document_id: str = Field(description="文档唯一标识")
-    file_name: str = Field(description="文件名")
+    file_name: str = Field(description="文档名称（主文档名称）")
     version: str = Field(description="版本号")
     document_type: DocumentType = Field(default=DocumentType.ATTACHMENT, description="文档类型")
-    file_content: Optional[Union[bytes, str]] = Field(default=None, description="文件对象")
-    text_content: Optional[str] = Field(default=None, description="纯文本格式内容描述")
     description: Optional[str] = Field(default=None, description="文档描述")
-    format: Optional[str] = Field(default=None, description="文件格式")
-    size: Optional[int] = Field(default=None, description="文件大小（字节）")
     created_by: Optional[str] = Field(default=None, description="创建人")
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")
     related_solution_ids: List[str] = Field(default_factory=list, description="关联的方案对象ID列表")
+    understanding_status: UnderstandingStatus = Field(default=UnderstandingStatus.PENDING, description="文档理解状态")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="文档元数据")
+    files: List['SolutionFile'] = Field(default_factory=list, description="包含的方案文件对象列表")
     
     @field_validator('version')
     @classmethod
@@ -102,9 +114,310 @@ class SolutionDocument(BaseModel):
         """转换为JSON字符串"""
         return json.dumps(self.model_dump(mode='json'), ensure_ascii=False, indent=2)
     
+    def add_file(self, file: 'SolutionFile') -> None:
+        """
+        添加方案文件到文档
+        
+        :param file: 方案文件对象
+        """
+        self.files.append(file)
+        self.updated_at = datetime.now()
+    
+    def remove_file(self, file_id: str) -> bool:
+        """
+        从文档中移除方案文件
+        
+        :param file_id: 文件ID
+        :return: 移除成功返回True
+        """
+        for i, file in enumerate(self.files):
+            if file.file_id == file_id:
+                del self.files[i]
+                self.updated_at = datetime.now()
+                return True
+        return False
+    
+    def get_file_by_id(self, file_id: str) -> Optional['SolutionFile']:
+        """
+        按文件ID获取文件
+        
+        :param file_id: 文件ID
+        :return: 文件对象，未找到返回None
+        """
+        for file in self.files:
+            if file.file_id == file_id:
+                return file
+        return None
+    
+    def get_main_file(self) -> Optional['SolutionFile']:
+        """
+        获取主文件（file_type为main的文件）
+        
+        :return: 主文件对象，未找到返回None
+        """
+        for file in self.files:
+            if file.file_type == DocumentType.MAIN:
+                return file
+        return None
+    
+    def get_attachment_files(self) -> List['SolutionFile']:
+        """
+        获取所有附件文件
+        
+        :return: 附件文件列表
+        """
+        return [file for file in self.files if file.file_type == DocumentType.ATTACHMENT]
+    
+    def get_reference_files(self) -> List['SolutionFile']:
+        """
+        获取所有参考文件
+        
+        :return: 参考文件列表
+        """
+        return [file for file in self.files if file.file_type == DocumentType.REFERENCE]
+    
+    def add_related_solution(self, solution_id: str) -> None:
+        """
+        添加关联的方案对象
+        
+        :param solution_id: 方案对象ID
+        """
+        if solution_id not in self.related_solution_ids:
+            self.related_solution_ids.append(solution_id)
+            self.updated_at = datetime.now()
+    
+    def remove_related_solution(self, solution_id: str) -> None:
+        """
+        移除关联的方案对象
+        
+        :param solution_id: 方案对象ID
+        """
+        if solution_id in self.related_solution_ids:
+            self.related_solution_ids.remove(solution_id)
+            self.updated_at = datetime.now()
+    
+    def update_files(self, files: List['SolutionFile']) -> None:
+        """
+        更新文档的文件列表
+        
+        :param files: 新的文件列表
+        """
+        self.files = files
+        self.updated_at = datetime.now()
+    
+    def __str__(self) -> str:
+        """返回文档的字符串表示"""
+        return f"SolutionDocument(ID={self.document_id}, 名称={self.file_name}, 版本={self.version}, 文件数={len(self.files)})"
+
+    def save(self) -> bool:
+        """
+        保存文档到数据库（新增或更新），级联保存关联的文件
+        
+        :return: 保存成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            if service.exists(self.document_id):
+                service.update(self)
+            else:
+                service.create(self)
+            return True
+        finally:
+            service.disconnect()
+
+    def delete(self) -> bool:
+        """
+        从数据库删除文档，级联删除关联的文件
+        
+        :return: 删除成功返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.delete(self.document_id) == 1
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_id(cls, document_id: str) -> Optional['SolutionDocument']:
+        """
+        按文档ID查询文档，同时加载关联的文件
+        
+        :param document_id: 文档ID
+        :return: 文档对象，未找到返回None
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read(document_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
+              limit: int = None) -> List['SolutionDocument']:
+        """
+        按条件查询文档，同时加载关联的文件
+        
+        :param where: 查询条件，如 {"file_name": "方案"}
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read_all(where=where, order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['SolutionDocument']:
+        """
+        全量查询文档，同时加载关联的文件
+        
+        :param order_by: 排序字段
+        :param limit: 返回数量限制
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.read_all(order_by=order_by, limit=limit)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def get_by_solution(cls, solution_id: str) -> List['SolutionDocument']:
+        """
+        获取方案的所有文档，同时加载关联的文件
+        
+        :param solution_id: 方案ID
+        :return: 文档列表
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.get_by_solution(solution_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def exists(cls, document_id: str) -> bool:
+        """
+        检查文档是否存在
+        
+        :param document_id: 文档ID
+        :return: 存在返回True
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.exists(document_id)
+        finally:
+            service.disconnect()
+
+    @classmethod
+    def count(cls, where: Dict[str, Any] = None) -> int:
+        """
+        统计文档数量
+        
+        :param where: 查询条件
+        :return: 文档数量
+        """
+        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        
+        service = SolutionDocumentService()
+        try:
+            return service.count(where=where)
+        finally:
+            service.disconnect()
+
+
+class SolutionFile(BaseModel):
+    """
+    方案文件对象类
+    
+    用于描述一个业务方案文件，包含文件的基本信息和内容。
+    与SolutionDocument结构保持一致，用于存储方案相关的文件数据。
+    
+    :param file_id: 文件唯一标识
+    :param document_id: 关联的文档ID
+    :param file_name: 文件名
+    :param version: 版本号
+    :param file_type: 文件类型（主文件/附件/参考文件）
+    :param file_content: 文件对象（二进制内容或文件路径）
+    :param text_content: 纯文本格式内容描述
+    :param description: 文件描述
+    :param format: 文件格式（如 PDF、Word、Markdown 等）
+    :param size: 文件大小（字节）
+    :param created_by: 创建人
+    :param created_at: 创建时间
+    :param updated_at: 更新时间
+    :param related_solution_ids: 关联的方案对象ID列表
+    :param understanding_status: 文件理解状态
+    :param metadata: 文件元数据（可选扩展信息）
+    
+    示例用法：
+        file = SolutionFile(
+            file_id="FILE001",
+            document_id="DOC001",
+            file_name="项目实施方案.docx",
+            version="1.0",
+            file_type="main",
+            text_content="项目实施方案的完整内容...",
+            format="docx",
+            related_solution_ids=["SOL001"]
+        )
+    """
+    file_id: str = Field(description="文件唯一标识")
+    document_id: Optional[str] = Field(default=None, description="关联的文档ID")
+    file_name: str = Field(description="文件名")
+    version: str = Field(description="版本号")
+    file_type: DocumentType = Field(default=DocumentType.ATTACHMENT, description="文件类型")
+    file_content: Optional[Union[bytes, str]] = Field(default=None, description="文件对象")
+    text_content: Optional[str] = Field(default=None, description="纯文本格式内容描述")
+    description: Optional[str] = Field(default=None, description="文件描述")
+    format: Optional[str] = Field(default=None, description="文件格式")
+    size: Optional[int] = Field(default=None, description="文件大小（字节）")
+    created_by: Optional[str] = Field(default=None, description="创建人")
+    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
+    updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")
+    related_solution_ids: List[str] = Field(default_factory=list, description="关联的方案对象ID列表")
+    understanding_status: UnderstandingStatus = Field(default=UnderstandingStatus.PENDING, description="文件理解状态")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="文件元数据")
+    
+    @field_validator('version')
+    @classmethod
+    def version_must_be_valid(cls, v: str) -> str:
+        """验证版本号格式"""
+        if not v or not v.strip():
+            raise ValueError("版本号不能为空")
+        return v.strip()
+    
+    @field_validator('file_id', 'file_name')
+    @classmethod
+    def id_and_name_must_not_be_empty(cls, v: str) -> str:
+        """验证ID和文件名不能为空"""
+        if not v or not v.strip():
+            raise ValueError("ID和文件名不能为空")
+        return v.strip()
+    
+    def to_json(self) -> str:
+        """转换为JSON字符串"""
+        return json.dumps(self.model_dump(mode='json'), ensure_ascii=False, indent=2)
+    
     def update_content(self, text_content: str, file_content: Optional[Union[bytes, str]] = None) -> None:
         """
-        更新文档内容
+        更新文件内容
         
         :param text_content: 纯文本内容
         :param file_content: 文件对象（可选）
@@ -135,22 +448,22 @@ class SolutionDocument(BaseModel):
             self.updated_at = datetime.now()
     
     def __str__(self) -> str:
-        """返回文档的字符串表示"""
-        return f"SolutionDocument(ID={self.document_id}, 文件名={self.file_name}, 版本={self.version}, 类型={self.document_type})"
+        """返回文件的字符串表示"""
+        return f"SolutionFile(ID={self.file_id}, 文件名={self.file_name}, 版本={self.version}, 类型={self.file_type})"
 
     def save(self) -> bool:
         """
-        保存文档到数据库（新增或更新）
+        保存文件到数据库（新增或更新）
         
         数据库配置从 db_config.json 文件读取。
         
         :return: 保存成功返回True
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
-            if service.exists(self.document_id):
+            if service.exists(self.file_id):
                 service.update(self)
             else:
                 service.create(self)
@@ -160,127 +473,127 @@ class SolutionDocument(BaseModel):
 
     def delete(self) -> bool:
         """
-        从数据库删除文档
+        从数据库删除文件
         
         数据库配置从 db_config.json 文件读取。
         
         :return: 删除成功返回True
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
-            return service.delete(self.document_id) == 1
+            return service.delete(self.file_id) == 1
         finally:
             service.disconnect()
 
     @classmethod
-    def get_by_id(cls, document_id: str) -> Optional['SolutionDocument']:
+    def get_by_id(cls, file_id: str) -> Optional['SolutionFile']:
         """
-        按文档ID查询文档
+        按文件ID查询文件
         
         数据库配置从 db_config.json 文件读取。
         
-        :param document_id: 文档ID
-        :return: 文档对象，未找到返回None
+        :param file_id: 文件ID
+        :return: 文件对象，未找到返回None
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
-            return service.read(document_id)
+            return service.read(file_id)
         finally:
             service.disconnect()
 
     @classmethod
     def query(cls, where: Dict[str, Any] = None, order_by: str = None, 
-              limit: int = None) -> List['SolutionDocument']:
+              limit: int = None) -> List['SolutionFile']:
         """
-        按条件查询文档
+        按条件查询文件
         
         数据库配置从 db_config.json 文件读取。
         
         :param where: 查询条件，如 {"file_name": "方案"}
         :param order_by: 排序字段
         :param limit: 返回数量限制
-        :return: 文档列表
+        :return: 文件列表
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
             return service.read_all(where=where, order_by=order_by, limit=limit)
         finally:
             service.disconnect()
 
     @classmethod
-    def get_all(cls, order_by: str = None, limit: int = None) -> List['SolutionDocument']:
+    def get_all(cls, order_by: str = None, limit: int = None) -> List['SolutionFile']:
         """
-        全量查询文档
+        全量查询文件
         
         数据库配置从 db_config.json 文件读取。
         
         :param order_by: 排序字段
         :param limit: 返回数量限制
-        :return: 文档列表
+        :return: 文件列表
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
             return service.read_all(order_by=order_by, limit=limit)
         finally:
             service.disconnect()
 
     @classmethod
-    def get_by_solution(cls, solution_id: str) -> List['SolutionDocument']:
+    def get_by_solution(cls, solution_id: str) -> List['SolutionFile']:
         """
-        获取方案的所有文档
+        获取方案的所有文件
         
         数据库配置从 db_config.json 文件读取。
         
         :param solution_id: 方案ID
-        :return: 文档列表
+        :return: 文件列表
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
             return service.get_by_solution(solution_id)
         finally:
             service.disconnect()
 
     @classmethod
-    def exists(cls, document_id: str) -> bool:
+    def exists(cls, file_id: str) -> bool:
         """
-        检查文档是否存在
+        检查文件是否存在
         
         数据库配置从 db_config.json 文件读取。
         
-        :param document_id: 文档ID
+        :param file_id: 文件ID
         :return: 存在返回True
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
-            return service.exists(document_id)
+            return service.exists(file_id)
         finally:
             service.disconnect()
 
     @classmethod
     def count(cls, where: Dict[str, Any] = None) -> int:
         """
-        统计文档数量
+        统计文件数量
         
         数据库配置从 db_config.json 文件读取。
         
         :param where: 查询条件
-        :return: 文档数量
+        :return: 文件数量
         """
-        from data_storage_services.sql_db_services.solution_service import SolutionDocumentService
+        from data_storage_services.sql_db_services.solution_service import SolutionFileService
         
-        service = SolutionDocumentService()
+        service = SolutionFileService()
         try:
             return service.count(where=where)
         finally:

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 仿真管理</title>
+    <link rel="stylesheet" href="../css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+        <main class="main-container">
+
+            <!-- 仿真管理 -->
+            <section key="simulation">
+
+                <h1 class="page-title">仿真管理</h1>
+                <p class="page-desc">仿真运行管理、启停控制与过程监控</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background:rgba(239,68,68,0.15);color:#f87171;">🚀</div>
+                            仿真运行清单
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" @click="showCreateSimulationModal = true">＋ 新建设仿真</button>
+                            <div class="pagination-size">
+                                <label>每页:</label>
+                                <select v-model="simulationPageSize" @change="simulationCurrentPage = 1">
+                                    <option :value="10">10</option>
+                                    <option :value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-container">
+                        <div v-for="s in pagedSimulations" :key="s.sim_id" class="list-item">
+                            <div class="item-content">
+                                <div class="item-title">{{ s.sim_name }}</div>
+                                <div class="item-sub">
+                                    <span class="tag tag-sm">{{ getSimulationTypeName(s.sim_type) }}</span>
+                                    <span class="tag tag-sm" :class="'tag-' + (s.status==='running'?'success':s.status==='pending'?'warning':'info')">
+                                        {{ s.status === 'running' ? '运行中' : s.status === 'pending' ? '待运行' : '已结束' }}
+                                    </span>
+                                    <span class="meta-sm">{{ formatDateTime(s.created_at) }}</span>
+                                </div>
+                                <div class="item-meta" v-if="s.description">{{ s.description }}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button v-if="s.status !== 'running'" class="btn btn-sm btn-primary" @click="startSimulation(s.sim_id)">启动</button>
+                                <button v-if="s.status === 'running'" class="btn btn-sm" @click="stopSimulation(s.sim_id)">停止</button>
+                                <button class="btn btn-sm" @click="viewSimulationDetail(s.sim_id)">详情</button>
+                            </div>
+                        </div>
+                        <div v-if="simulations.length === 0" class="empty-state">
+                            <div style="font-size:48px;">🚀</div>
+                            <p>暂无仿真，点击"＋ 新建设仿真"开始吧</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" v-if="simulations.length > 0">
+                        <button class="page-btn" :disabled="simulationCurrentPage === 1" @click="simulationCurrentPage--">上一页</button>
+                        <span class="page-info">{{ simulationCurrentPage }} / {{ simulationTotalPages }}</span>
+                        <button class="page-btn" :disabled="simulationCurrentPage === simulationTotalPages" @click="simulationCurrentPage++">下一页</button>
+                    </div>
+                </div>
+
+                <!-- 新建设仿真弹窗 -->
+                <div v-if="showCreateSimulationModal" class="modal-overlay" @click.self="showCreateSimulationModal = false">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>新建设仿真</h3>
+                            <button class="modal-close" @click="showCreateSimulationModal = false">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-grid">
+                                <div class="form-group full-width">
+                                    <div class="form-label">仿真名称 *</div>
+                                    <input class="form-input" v-model="newSimulation.name" placeholder="例如：某任务仿真推演">
+                                </div>
+                                <div class="form-group">
+                                    <div class="form-label">仿真类型</div>
+                                    <select class="form-input" v-model="newSimulation.type">
+                                        <option value="discrete">离散事件</option>
+                                        <option value="agent">Agent 仿真</option>
+                                        <option value="hybrid">混合仿真</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <div class="form-label">关联方案</div>
+                                    <select class="form-input" v-model="newSimulation.solution_id">
+                                        <option value="">无</option>
+                                        <option v-for="s in structuredSolutions" :key="s.solution_id" :value="s.solution_id">{{ s.solution_name }}</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <div class="form-label">描述</div>
+                                    <textarea class="form-input" v-model="newSimulation.description" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" @click="showCreateSimulationModal = false">取消</button>
+                            <button class="btn btn-primary" @click="createSimulation" :disabled="!newSimulation.name">保存</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 仿真详情弹窗 -->
+                <div v-if="showSimulationDetail" class="modal-overlay" @click.self="showSimulationDetail = false">
+                    <div class="modal-content" style="max-width:780px;">
+                        <div class="modal-header">
+                            <h3>仿真详情</h3>
+                            <button class="modal-close" @click="showSimulationDetail = false">×</button>
+                        </div>
+                        <div class="modal-body" v-if="currentSimulation">
+                            <div class="detail-section">
+                                <div class="detail-row"><div class="detail-label">编号</div><div class="detail-value">{{ currentSimulation.sim_id }}</div></div>
+                                <div class="detail-row"><div class="detail-label">名称</div><div class="detail-value">{{ currentSimulation.sim_name }}</div></div>
+                                <div class="detail-row"><div class="detail-label">类型</div><div class="detail-value">{{ getSimulationTypeName(currentSimulation.sim_type) }}</div></div>
+                                <div class="detail-row"><div class="detail-label">状态</div><div class="detail-value">
+                                    <span class="tag tag-sm" :class="'tag-' + (currentSimulation.status==='running'?'success':currentSimulation.status==='pending'?'warning':'info')">
+                                        {{ currentSimulation.status === 'running' ? '运行中' : currentSimulation.status === 'pending' ? '待运行' : '已结束' }}
+                                    </span>
+                                </div></div>
+                                <div class="detail-row"><div class="detail-label">关联方案</div><div class="detail-value">{{ currentSimulation.solution_id || '-' }}</div></div>
+                                <div class="detail-row"><div class="detail-label">创建时间</div><div class="detail-value">{{ formatDateTime(currentSimulation.created_at) }}</div></div>
+                                <div class="detail-row" v-if="currentSimulation.started_at"><div class="detail-label">启动时间</div><div class="detail-value">{{ formatDateTime(currentSimulation.started_at) }}</div></div>
+                                <div class="detail-row" v-if="currentSimulation.description"><div class="detail-label">描述</div><div class="detail-value">{{ currentSimulation.description }}</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 消息提示 -->
+            <div class="toast-container">
+                <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="toast"
+                    :class="'toast-' + toast.type"
+                >
+                    <div class="toast-icon">
+                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/simulation.js"></script>
+
+</body>
+
+</html>

@@ -917,3 +917,191 @@ POST /api/knowledge/delete
    - 添加表单保存和恢复功能
 
 ================================================================================
+
+================================================================================
+修改时间: 2026-06-24
+修改内容: 优化知识详情页，实现动态详情显示匹配业务对象属性
+
+================================================================================
+修改原因
+================================================================================
+1. 业务对象属性展示需求：
+   - 用户查看知识详情时，应根据知识库类型显示不同的详情内容
+   - 评价指标库的详情应显示EvaluationIndex对象的所有属性
+   - 方案拆解库的详情应显示Task对象的所有属性
+   - 仿真知识库和其他知识库的详情应显示Knowledge对象的所有属性
+
+2. 数据展示完整性：
+   - 确保详情页展示的信息完整且符合业务对象定义
+   - 提供友好的字段名称显示（如将index_type转换为中文"完整性"等）
+
+================================================================================
+具体修改
+================================================================================
+
+1. HTML部分 - 动态详情模板（第1577-1776行）：
+
+   评价指标库详情显示：
+   - 指标ID（index_id）
+   - 指标名称（name）
+   - 指标说明（description）
+   - 评价方法（evaluation_method）
+   - 指标类型（index_type）：使用getIndexTypeName转换为中文
+   - 指标层级（index_level）：使用getIndexLevelName转换为中文
+   - 父指标ID（parent_id）
+   - 权重（weight）
+   - 评分范围（score_range）：分别显示最小值和最大值
+   - 评价Agent ID列表（agent_ids）
+   - 是否启用（is_active）
+   - 创建时间（created_at）
+
+   方案拆解库详情显示：
+   - 任务ID（task_id）
+   - 任务名称（task_name）
+   - 工作内容（content）
+   - 执行角色（execute_role）
+   - 期望开始时间（expected_start_time）
+   - 期望结束时间（expected_end_time）
+   - 资源消耗（resource_consumption）
+   - 优先级（priority）：使用getPriorityName转换为中文
+   - 输出物目标角色（output_target_role）
+   - 任务类型（task_type）：使用getTaskTypeName转换为中文
+   - 是否完成（is_completed）
+   - 创建时间（created_at）
+
+   仿真知识库详情显示：
+   - 知识ID（knowledge_id）
+   - 摘要（summary）
+   - 内容（content）
+   - 仿真场景类型（simulation_type）：使用getSimulationTypeName转换为中文
+   - 标签（tags）
+   - 创建时间（created_at）
+
+   其他知识库详情显示：
+   - 知识ID（knowledge_id）
+   - 标题（title）
+   - 摘要（summary）
+   - 内容（content）
+   - 标签（tags）
+   - 分类（category）：使用getKnowledgeBaseName转换为中文
+   - 创建时间（created_at）
+
+2. JavaScript部分 - 辅助函数（第2786-2854行）：
+
+   新增辅助函数用于中英文转换：
+   - getIndexTypeName(type)：将指标类型转换为中文
+   - getIndexLevelName(level)：将指标层级转换为中文
+   - getPriorityName(priority)：将优先级转换为中文
+   - getTaskTypeName(type)：将任务类型转换为中文
+   - getSimulationTypeName(type)：将仿真场景类型转换为中文
+
+   这些函数使用映射表将英文枚举值转换为中文显示，提高用户体验。
+
+3. JavaScript部分 - return对象导出（第3155-3162行）：
+
+   在Vue return对象中导出新函数：
+   - getIndexTypeName
+   - getIndexLevelName
+   - getPriorityName
+   - getTaskTypeName
+   - getSimulationTypeName
+
+================================================================================
+技术实现细节
+================================================================================
+
+1. 动态模板渲染：
+   - 使用Vue的v-if和v-else-if指令根据knowledgeDetail.category判断知识库类型
+   - 根据知识库类型显示对应的详情模板
+   - 通过字段存在性判断（如knowledgeDetail.index_id）作为备选判断条件
+
+2. 标题动态显示：
+   - 弹窗标题根据知识类型动态显示：title、name或task_name
+   - 如果都不存在则显示默认文字"知识详情"
+
+3. 字段值安全访问：
+   - 使用||操作符提供默认值
+   - 对可能为空的数组使用(v || [])
+   - 对可选字段使用三元表达式提供替代文本
+
+4. 类型名称映射：
+   - 使用映射表（const typeMap = {...}）实现类型转换
+   - 找不到映射时返回原始值，确保不出现undefined
+
+================================================================================
+使用示例
+================================================================================
+
+# 查看评价指标详情
+1. 在知识管理页面选择一个评价指标库（如"评价指标库"）
+2. 点击知识条目进入详情页
+3. 详情页显示评价指标的所有属性
+
+# 查看任务详情
+1. 在知识管理页面选择方案拆解库
+2. 点击任务条目进入详情页
+3. 详情页显示任务的所有属性
+
+================================================================================
+优化效果
+================================================================================
+
+1. 信息完整性：
+   - 评价指标详情包含所有EvaluationIndex属性
+   - 任务详情包含所有Task属性
+   - 知识详情包含所有Knowledge属性
+
+2. 用户体验：
+   - 使用中文显示枚举类型字段
+   - 提供字段的友好名称和说明
+   - 支持空值的安全显示
+
+3. 代码质量：
+   - 动态模板减少重复代码
+   - 辅助函数提高代码复用性
+   - 清晰的注释和文档
+
+================================================================================
+待优化方向
+================================================================================
+
+1. 详情页增强：
+   - 添加关联知识的显示（如评价指标关联的知识）
+   - 添加编辑历史的查看
+   - 添加属性字段的排序和分组
+
+2. 交互优化：
+   - 支持详情页的字段复制
+   - 支持字段值的高亮和搜索
+   - 支持详情的打印和导出
+
+3. 数据展示优化：
+   - 支持长文本的折叠和展开
+   - 支持表格形式展示列表型字段
+   - 支持关联数据的链接跳转
+
+================================================================================
+
+[2026-06-28 22:40:14] 仿真虚空间 方案对象 (senv_solutions / senv_solution_revision)
+
+1. 新增 BO: bo/senv/solution.py - 完整复制方案元空间 Solution 结构, 新增 simulation_task_id / simulation_task_batch 两个必填业务字段, 与 base.id 共同联合唯一。使用 Pydantic BaseModel 定义 SolutionBaseInfo / SolutionKeyInfo / SolutionDocInfo / RevisionRecord / Solution, 以及 SolutionStatus 枚举 + new_solution 工厂方法。
+2. 新增服务: data_storage_services/sql_db_services/senv/solution_service.py - SenvSolutionService, 操作 senv_solutions / senv_solution_revision 两张表, 实现 add/delete/update/bump_version/get_by_unique/get_by_name/list_all/search_by_content/count/export/delete_by_task 等方法。关键实现点:
+   - 联合主键 (id, simulation_task_id, simulation_task_batch)
+   - 同一 (simulation_task_id, simulation_task_batch) 下 solution_name 唯一 (UNIQUE INDEX)
+   - JSON 列表字段走 SQL TEXT 存储, _j/_jloads 序列化, _jloads 修复为对 json.loads 结果为 None / 非法 JSON / "null" 统一回落默认值 []
+   - 新增 from_smeta() 方法: 查询 smeta_solutions / smeta_solution_revision, 深拷贝 base/key/doc + 修订轨迹, 重新分配 UUID, 写入调用方指定的 simulation_task_id / simulation_task_batch, 并追加一条 "从方案元空间方案 {smeta_solution_id} 复制而来 (仿真任务 {task}/{batch})" 的修订。
+3. 更新数据初始化脚本 sqlite_db_init.sql: 追加 CREATE TABLE IF NOT EXISTS senv_solutions / senv_solution_revision DDL + 索引。
+4. 更新服务导出: data_storage_services/sql_db_services/senv/__init__.py / data_storage_services/sql_db_services/__init__.py / data_storage_services/__init__.py 暴露 SenvSolutionService。
+5. 追加数据结构文档: data_storage_services/SQLite/data_structure.md 末尾追加 senv_solutions / senv_solution_revision 表结构及 SenvSolutionService 方法说明。
+6. 端到端测试 (全部通过): 方案元空间新增、仿真虚空间原生新增、from_smeta 复制、同 task+batch 同名冲突抛 ValueError、不同 task/batch 允许同名共存、更新 + 主/次版本递增、按ID/名称唯一查询、关键字搜索、按任务/批次/状态过滤、计数、文本导出、删除、按任务批量清理。
+7. 思维路径: 三空间命名空间下, 仿真虚空间的方案对象 = 元空间方案实体在仿真任务/批次下的实例化副本。复制路径分两条: 原生创建 new_solution + add; 或 from_smeta 深拷贝元空间方案并重新分配 senv 侧主键。联合唯一约束确保同一仿真任务+批次下方案名称不重, 同时允许同名方案跨不同仿真任务并存 (解决仿真场景常见多批次并行问题)。修订表使用 (solution_id, simulation_task_id, simulation_task_batch, revision_no) 复合主键, 每次修改都追加修订行并 bump updated_at; 主/次版本 bump 会追加修订; from_smeta 会把 smeta 历史修订一并带过来再追加一条 "来自 smeta" 的修订, 保证审计链闭环。
+
+受影响文件:
+- bo/senv/solution.py (新增)
+- data_storage_services/sql_db_services/senv/solution_service.py (新增)
+- data_storage_services/sql_db_services/senv/__init__.py
+- data_storage_services/sql_db_services/__init__.py
+- data_storage_services/__init__.py
+- data_storage_services/SQLite/sqlite_db_init.sql
+- data_storage_services/SQLite/data_structure.md
+- 修改记录.log (本文件)

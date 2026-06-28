@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 方案理解</title>
+    <link rel="stylesheet" href="../css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+        <main class="main-container">
+
+            <!-- 方案理解 -->
+            <section key="understanding">
+
+                <h1 class="page-title">方案理解</h1>
+                <p class="page-desc">自动对方案进行语义理解、提取关键词与标签、生成理解摘要</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background: rgba(34,197,94,0.15);color:#4ade80;">🧠</div>
+                            理解任务
+                        </div>
+                    </div>
+
+                    <div class="list-container">
+                        <div v-for="doc in pendingDocuments" :key="doc.document_id" class="list-item">
+                            <div class="item-content">
+                                <div class="item-title">{{ doc.document_name }}</div>
+                                <div class="item-sub">
+                                    <span class="tag tag-sm">{{ doc.document_type }}</span>
+                                    <span class="tag tag-sm" :class="'tag-' + (doc.status==='completed'?'success':doc.status==='processing'?'warning':'info')">
+                                        {{ doc.status === 'completed' ? '已理解' : doc.status === 'processing' ? '理解中' : '待理解' }}
+                                    </span>
+                                    <span class="meta-sm">文件数 {{ doc.file_count || 0 }} · {{ formatDateTime(doc.created_at) }}</span>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button v-if="doc.status !== 'completed'" class="btn btn-sm btn-primary" @click="runUnderstanding(doc.document_id)">开始理解</button>
+                                <button class="btn btn-sm" @click="viewUnderstandingDetail(doc.document_id)">查看详情</button>
+                            </div>
+                        </div>
+                        <div v-if="pendingDocuments.length === 0" class="empty-state">
+                            <div style="font-size:48px;">✅</div>
+                            <p>所有文档均已理解，或暂无文档</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 理解结果详情弹窗 -->
+                <div v-if="showUnderstandingDetail" class="modal-overlay" @click.self="showUnderstandingDetail = false">
+                    <div class="modal-content" style="max-width:820px;">
+                        <div class="modal-header">
+                            <h3>方案理解结果</h3>
+                            <button class="modal-close" @click="showUnderstandingDetail = false">×</button>
+                        </div>
+                        <div class="modal-body" v-if="currentUnderstanding">
+                            <div class="detail-section">
+                                <div class="detail-row"><div class="detail-label">文档</div><div class="detail-value">{{ currentUnderstanding.document_id }}</div></div>
+                                <div class="detail-row"><div class="detail-label">状态</div><div class="detail-value">
+                                    <span class="tag tag-sm" :class="'tag-' + (currentUnderstanding.status==='completed'?'success':currentUnderstanding.status==='processing'?'warning':'info')">
+                                        {{ currentUnderstanding.status === 'completed' ? '已理解' : currentUnderstanding.status === 'processing' ? '理解中' : '待理解' }}
+                                    </span>
+                                </div></div>
+                                <div class="detail-row"><div class="detail-label">理解时间</div><div class="detail-value">{{ formatDateTime(currentUnderstanding.understood_at) }}</div></div>
+                            </div>
+                            <div class="detail-section" v-if="currentUnderstanding.summary">
+                                <div class="detail-label" style="font-size:16px;margin-bottom:10px;">📝 理解摘要</div>
+                                <div style="padding:16px;background:rgba(30,41,59,0.6);border-radius:8px;line-height:1.6;font-size:14px;white-space:pre-wrap;">{{ currentUnderstanding.summary }}</div>
+                            </div>
+                            <div class="detail-section" v-if="currentUnderstanding.keywords && currentUnderstanding.keywords.length">
+                                <div class="detail-label" style="font-size:16px;margin-bottom:10px;">🔑 关键要素</div>
+                                <div class="tag-input-container">
+                                    <span v-for="(k,i) in currentUnderstanding.keywords" :key="i" class="tag">{{ k }}</span>
+                                </div>
+                            </div>
+                            <div class="detail-section" v-if="currentUnderstanding.goals">
+                                <div class="detail-label" style="font-size:16px;margin-bottom:10px;">🎯 目标要点</div>
+                                <div style="padding:16px;background:rgba(30,41,59,0.6);border-radius:8px;font-size:14px;line-height:1.6;">{{ currentUnderstanding.goals }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 消息提示 -->
+            <div class="toast-container">
+                <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="toast"
+                    :class="'toast-' + toast.type"
+                >
+                    <div class="toast-icon">
+                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/understanding.js"></script>
+
+</body>
+
+</html>

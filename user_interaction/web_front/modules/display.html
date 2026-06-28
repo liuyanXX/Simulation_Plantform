@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 信息展示</title>
+    <link rel="stylesheet" href="../css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+        <main class="main-container">
+
+            <!-- 信息展示 -->
+            <section key="display">
+                <h1 class="page-title">信息展示</h1>
+                <p class="page-desc">综合态势与数据概览</p>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background:rgba(14,165,233,0.15);color:#38bdf8;">📊</div>
+                            统计指标
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.solutionCount }}</div>
+                            <div class="stat-label">方案数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.documentCount }}</div>
+                            <div class="stat-label">文档数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.decompositionCount }}</div>
+                            <div class="stat-label">拆分行为</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.simulationCount }}</div>
+                            <div class="stat-label">仿真条目</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.knowledgeCount }}</div>
+                            <div class="stat-label">知识条目</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 消息提示 -->
+            <div class="toast-container">
+                <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="toast"
+                    :class="'toast-' + toast.type"
+                >
+                    <div class="toast-icon">
+                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/display.js"></script>
+
+</body>
+
+</html>

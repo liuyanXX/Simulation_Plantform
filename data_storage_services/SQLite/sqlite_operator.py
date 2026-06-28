@@ -34,18 +34,26 @@ class SQLiteOperator:
         """
         初始化SQLite操作器
         
-        :param db_path: 数据库文件存放目录
+        :param db_path: 数据库文件存放目录（相对路径会解析为相对于SQLite目录的绝对路径）
         :param db_name: 数据库文件名
         """
-        self.db_path = db_path
+        # 统一解析为绝对路径：以 sqlite_operator.py 所在目录为基准，
+        # 即 Simulation_Plantform/data_storage_services/SQLite/
+        # 向上两级到 data_storage_services，再向上一级到 Simulation_Plantform/
+        sqlite_dir = os.path.dirname(os.path.abspath(__file__))          # .../data_storage_services/SQLite
+        services_dir = os.path.dirname(sqlite_dir)                       # .../data_storage_services
+        project_root = os.path.dirname(services_dir)                      # .../Simulation_Plantform
+        abs_db_path = os.path.abspath(os.path.join(project_root, db_path))
+        
+        self.db_path = abs_db_path
         self.db_name = db_name
-        self.db_file = os.path.join(db_path, db_name)
+        self.db_file = os.path.join(self.db_path, db_name)
         self.connection: Optional[sqlite3.Connection] = None
         self.cursor: Optional[sqlite3.Cursor] = None
         self.logger = logging.getLogger(__name__)
         
         # 确保数据库目录存在
-        os.makedirs(db_path, exist_ok=True)
+        os.makedirs(self.db_path, exist_ok=True)
     
     def connect(self) -> None:
         """
@@ -661,6 +669,43 @@ TABLE_DEFINITIONS = {
         "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
         "org_id": "TEXT NOT NULL",
         "employee_id": "TEXT NOT NULL"
+    },
+
+    # 拆分行为表：记录每次方案拆分的过程和结果
+    "decomposition_behaviors": {
+        "behavior_id": "TEXT PRIMARY KEY",
+        "solution_id": "TEXT NOT NULL",
+        "solution_name": "TEXT",
+        "strategy": "TEXT NOT NULL DEFAULT 'auto'",
+        "status": "TEXT NOT NULL DEFAULT 'completed'",
+        "organizations": "TEXT",
+        "personnel": "TEXT",
+        "roles": "TEXT",
+        "task_manifest_id": "TEXT",
+        "tasks_graph_id": "TEXT",
+        "flow_groups": "TEXT",
+        "tasks": "TEXT",
+        "process_log": "TEXT",
+        "result_summary": "TEXT",
+        "created_by": "TEXT",
+        "created_at": "TEXT NOT NULL",
+        "updated_at": "TEXT NOT NULL"
+    },
+
+    # 系统空间 · 组织对象表
+    "ssys_organization": {
+        "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "org_code": "TEXT NOT NULL",
+        "org_name": "TEXT NOT NULL",
+        "org_type": "TEXT NOT NULL DEFAULT 'ORG'",
+        "description": "TEXT",
+        "parent_id": "INTEGER",
+        "parent_name": "TEXT",
+        "sort_order": "INTEGER NOT NULL DEFAULT 0",
+        "status": "TEXT NOT NULL DEFAULT 'active'",
+        "extra_info": "TEXT",
+        "created_at": "TEXT NOT NULL",
+        "updated_at": "TEXT NOT NULL"
     }
 }
 

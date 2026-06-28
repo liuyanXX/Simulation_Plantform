@@ -17,6 +17,7 @@ from .tasks_graph import TasksGraph
 from .task_manifest import TaskManifest
 from .role import Role
 from .organization import Organization, OrganizationFactory
+from .ssys.employee import Employee, EmployeeTreeNode
 
 __all__ = [
     'AIWorker',
@@ -30,4 +31,6 @@ __all__ = [
     'Role',
     'Organization',
     'OrganizationFactory',
+    'Employee',
+    'EmployeeTreeNode',
 ]

@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>仿真平台 - 用户交互界面</title>
+
+    <link rel="stylesheet" href="./css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+
+
+        <!-- 导航栏 -->
+
+        <nav class="navbar">
+
+            <div class="navbar-inner">
+
+                <div class="logo">
+
+                    <div class="logo-icon">◈</div>
+
+                    仿真平台
+
+                </div>
+
+                <div class="nav-menu">
+
+                    <button
+                        v-for="item in navItems"
+                        :key="item.key"
+                        class="nav-item"
+                        :class="{ active: currentView === item.key }"
+                        @click="switchView(item.key)"
+                    >
+                        {{ item.label }}
+                    </button>
+
+                </div>
+
+            </div>
+
+        </nav>
+
+
+
+        <!-- 主内容：模块 iframe -->
+
+        <main class="main-container">
+
+            <div class="module-shell">
+
+                <iframe
+                    :src="currentSrc"
+                    class="module-iframe"
+                    frameborder="0"
+                    allow="fullscreen"
+                    @load="onIframeLoad"
+                ></iframe>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+
+            setup() {
+
+                const navItems = [
+                    { key: 'solution',      label: '方案管理'  },
+                    { key: 'understanding', label: '方案理解'  },
+                    { key: 'decomposition',  label: '方案拆分'  },
+                    { key: 'display',       label: '信息展示'  },
+                    { key: 'simulation',    label: '仿真管理'  },
+                    { key: 'evaluation',    label: '评估管理'  },
+                    { key: 'knowledge',     label: '知识管理'  }
+                ];
+
+                const currentView = ref('solution');
+
+                const currentSrc = computed(() => {
+                    return `./modules/${currentView.value}.html`;
+                });
+
+                const switchView = (key) => {
+                    currentView.value = key;
+                };
+
+                const onIframeLoad = () => {
+                };
+
+                return {
+                    navItems,
+                    currentView,
+                    currentSrc,
+                    switchView,
+                    onIframeLoad
+                };
+            }
+
+        }).mount('#app');
+
+    </script>
+
+</body>
+
+</html>

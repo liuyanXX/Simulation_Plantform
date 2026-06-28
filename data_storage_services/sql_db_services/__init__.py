@@ -1,8 +1,6 @@
-"""关系数据库存储服务子模块
+﻿"""鍏崇郴鏁版嵁搴撳瓨鍌ㄦ湇鍔″瓙妯″潡
 
-提供屏蔽底层具体关系数据库实现细节的通用操作服务。
-根据配置参数选择连接到具体的数据库实例，默认连接SQLite数据库。
-"""
+鎻愪緵灞忚斀搴曞眰鍏蜂綋鍏崇郴鏁版嵁搴撳疄鐜扮粏鑺傜殑閫氱敤鎿嶄綔鏈嶅姟銆?鏍规嵁閰嶇疆鍙傛暟閫夋嫨杩炴帴鍒板叿浣撶殑鏁版嵁搴撳疄渚嬶紝榛樿杩炴帴SQLite鏁版嵁搴撱€?"""
 
 from .base_service import SQLDatabaseService
 from .solution_service import SolutionService
@@ -15,6 +13,9 @@ from .tasks_graph_service import TasksGraphService
 from .task_manifest_service import TaskManifestService
 from .evaluation_index_service import EvaluationIndexService
 from .knowledge_service import KnowledgeService
+from .ssys import SsysOrganizationService, SsysEmployeeService, SsysRoleService
+from .smeta import SmetaOrganizationService, SmetaEmployeeService, SmetaRoleService, SmetaFileService, SmetaSolutionService
+from .senv import SenvOrganizationService, SenvEmployeeService, SenvRoleService, SenvSolutionService
 
 __all__ = [
     'SQLDatabaseService',
@@ -27,5 +28,24 @@ __all__ = [
     'TasksGraphService',
     'TaskManifestService',
     'EvaluationIndexService',
-    'KnowledgeService'
+    'KnowledgeService',
+    'SsysOrganizationService',
+    'SsysEmployeeService',
+    'SsysRoleService',
+    'SmetaOrganizationService',
+    'SmetaEmployeeService',
+    'SmetaRoleService',
+    'SmetaFileService',
+    'SmetaSolutionService',
+    'SenvSolutionService',
+    'SenvOrganizationService',
+    'SenvEmployeeService',
+    'SenvRoleService',
 ]
+
+
+
+
+
+
+

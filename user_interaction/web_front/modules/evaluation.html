@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真平台 - 评估管理</title>
+    <link rel="stylesheet" href="../css/app.css">
+
+</head>
+
+<body>
+
+    <div id="app">
+
+        <div class="bg-animation"></div>
+
+        <main class="main-container">
+
+            <!-- 评估管理 -->
+            <section key="evaluation">
+                <h1 class="page-title">评估管理</h1>
+                <p class="page-desc">仿真结果评估与指标分析</p>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon" style="background:rgba(168,85,247,0.15);color:#c084fc;">📈</div>
+                            评估指标
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        <div style="font-size:48px;">📈</div>
+                        <p>评估功能待完善，请先运行仿真后在此分析结果</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 消息提示 -->
+            <div class="toast-container">
+                <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="toast"
+                    :class="'toast-' + toast.type"
+                >
+                    <div class="toast-icon">
+                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/evaluation.js"></script>
+
+</body>
+
+</html>
