@@ -1,8 +1,18 @@
 const { createApp, ref, computed, reactive, onMounted, watch } = Vue;
 const C = (typeof window !== 'undefined' && window.SP_Common) || {};
-const { apiFetch, showToast, toasts, removeToast, formatDateTime } = C;
+const { apiFetch: _apiFetch, showToast: _showToast, toasts, removeToast, formatDateTime } = C;
 
 const API_BASE = '/api/system';
+
+const apiFetch = typeof _apiFetch === 'function' ? _apiFetch : async (url, opts = {}) => {
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+};
+
+const showToast = typeof _showToast === 'function' ? _showToast : (title, detail, type) => {
+    console.log(`[Toast] ${type}: ${title} - ${detail}`);
+};
 
 createApp({
     setup() {
@@ -20,6 +30,13 @@ createApp({
         const total = ref(0);
         const currentPage = ref(1);
         const pageSize = ref(10);
+        
+        const loadStatus = ref('加载中...');
+        const loadStatusType = ref('info');
+        
+        const loadStatusClass = computed(() => {
+            return `status-${loadStatusType.value}`;
+        });
 
         const orgParents = ref([]);
         const allRoles = ref([]);
@@ -539,8 +556,19 @@ createApp({
         }
 
         onMounted(async () => {
-            await refreshOrgParents();
-            await reloadList();
+            try {
+                loadStatus.value = '正在加载组织数据...';
+                loadStatusType.value = 'info';
+                await refreshOrgParents();
+                loadStatus.value = `已加载 ${orgParents.value.length} 个父组织，正在查询列表...`;
+                await reloadList();
+                loadStatus.value = `加载完成，共 ${total.value} 条记录`;
+                loadStatusType.value = 'success';
+            } catch (e) {
+                loadStatus.value = `加载失败: ${e.message}`;
+                loadStatusType.value = 'error';
+                console.error('初始化失败:', e);
+            }
         });
 
         return {
@@ -549,6 +577,7 @@ createApp({
             tabs, currentTab,
             keyword, isLoading,
             list, total, currentPage, pageSize,
+            loadStatus, loadStatusClass,
             orgFilter, empFilter, roleFilter, workerFilter,
             orgParents, allRoles, employeeRoles,
             showModal, modalTitle, isSubmitting, isEditing, form,

@@ -144,6 +144,8 @@ class SsysOrganizationService:
         params: List[Any] = []
         if parent_id is None:
             clauses.append("parent_id IS NULL")
+        elif parent_id == -1:
+            pass
         else:
             clauses.append("parent_id = ?")
             params.append(int(parent_id))
@@ -199,6 +201,8 @@ class SsysOrganizationService:
         params: List[Any] = []
         if parent_id is None:
             clauses.append("parent_id IS NULL")
+        elif parent_id == -1:
+            pass
         else:
             clauses.append("parent_id = ?")
             params.append(int(parent_id))

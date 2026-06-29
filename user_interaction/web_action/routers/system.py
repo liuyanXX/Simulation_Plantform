@@ -45,18 +45,33 @@ def list_organizations(
         )
 
         svc = SsysOrganizationService()
-        orgs = svc.list_all(
-            parent_id=parent_id,
-            status=status or None,
-            keyword=keyword or None,
-            page=page,
-            page_size=page_size,
-        )
-        total = svc.count(
-            parent_id=parent_id,
-            status=status or None,
-            keyword=keyword or None,
-        )
+        
+        if parent_id is not None:
+            orgs = svc.list_all(
+                parent_id=parent_id,
+                status=status or None,
+                keyword=keyword or None,
+                page=page,
+                page_size=page_size,
+            )
+            total = svc.count(
+                parent_id=parent_id,
+                status=status or None,
+                keyword=keyword or None,
+            )
+        else:
+            orgs = svc.list_all(
+                parent_id=-1,
+                status=status or None,
+                keyword=keyword or None,
+                page=page,
+                page_size=page_size,
+            )
+            total = svc.count(
+                parent_id=-1,
+                status=status or None,
+                keyword=keyword or None,
+            )
         svc.disconnect()
         return _ok({
             "list": [o.model_dump() for o in orgs],

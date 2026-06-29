@@ -98,6 +98,9 @@ const SP_Common = (() => {
     try {
       const res = await fetch(url, opts);
       const text = await res.text();
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${text || '请求失败'}`);
+      }
       let data;
       try { data = JSON.parse(text); } catch { data = text; }
       if (data && typeof data === 'object' && data.success === false) {

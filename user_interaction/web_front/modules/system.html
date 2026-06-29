@@ -1,359 +1,23 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>仿真平台 - 系统管理</title>
-
     <link rel="stylesheet" href="../css/app.css">
-
-    <style>
-
-        .sys-wrap {
-            display: flex;
-            gap: 16px;
-            min-height: calc(100vh - 72px);
-            padding: 16px 16px 16px 0;
-            box-sizing: border-box;
-        }
-
-        .sys-side {
-            width: 220px;
-            flex-shrink: 0;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(71, 85, 105, 0.35);
-            border-radius: 12px;
-            padding: 12px;
-            overflow-y: auto;
-            max-height: calc(100vh - 72px);
-        }
-
-        .sys-side-title {
-            font-size: 12px;
-            color: #64748b;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .sys-tab-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-bottom: 4px;
-            border: 1px solid transparent;
-            transition: all 0.18s ease;
-            font-size: 14px;
-            color: #cbd5e1;
-        }
-
-        .sys-tab-item:hover {
-            background: rgba(71, 85, 105, 0.25);
-        }
-
-        .sys-tab-item.active {
-            background: rgba(79, 70, 229, 0.22);
-            border-color: rgba(99, 102, 241, 0.55);
-            color: #e0e7ff;
-        }
-
-        .sys-tab-item .tab-icon {
-            font-size: 16px;
-            width: 22px;
-            text-align: center;
-        }
-
-        .sys-tab-item .tab-label {
-            font-weight: 600;
-        }
-
-        .sys-tab-item .tab-count {
-            margin-left: auto;
-            font-size: 11px;
-            color: #94a3b8;
-            background: rgba(51, 65, 85, 0.6);
-            padding: 1px 8px;
-            border-radius: 999px;
-        }
-
-        .sys-main {
-            flex: 1;
-            min-width: 0;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(71, 85, 105, 0.35);
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            overflow: auto;
-            max-height: calc(100vh - 72px);
-        }
-
-        .sys-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-
-        .sys-toolbar .sys-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: #f1f5f9;
-        }
-
-        .sys-toolbar .sys-title small {
-            color: #94a3b8;
-            font-weight: 400;
-            margin-left: 8px;
-            font-size: 12px;
-        }
-
-        .sys-toolbar .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .sys-searchbar {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 8px;
-            padding: 4px 8px;
-        }
-
-        .sys-searchbar input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #e2e8f0;
-            font-size: 13px;
-            min-width: 220px;
-            flex: 1;
-        }
-
-        .sys-searchbar input::placeholder { color: #64748b; }
-
-        .sys-filter-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            padding: 8px 10px;
-            background: rgba(30, 41, 59, 0.6);
-            border: 1px solid rgba(71, 85, 105, 0.35);
-            border-radius: 8px;
-        }
-
-        .sys-filter-bar select,
-        .sys-filter-bar input {
-            background: rgba(15, 23, 42, 0.9);
-            color: #e2e8f0;
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .sys-filter-bar label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-right: 4px;
-        }
-
-        .sys-table-wrap {
-            flex: 1;
-            min-height: 0;
-            overflow: auto;
-        }
-
-        .sys-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .sys-table thead th {
-            position: sticky;
-            top: 0;
-            background: rgba(15, 23, 42, 0.95);
-            z-index: 2;
-            text-align: left;
-            font-size: 12px;
-            font-weight: 600;
-            color: #94a3b8;
-            padding: 8px 10px;
-            letter-spacing: 1px;
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
-        }
-
-        .sys-table tbody tr {
-            transition: background 0.15s ease;
-            border-bottom: 1px solid rgba(71, 85, 105, 0.15);
-        }
-
-        .sys-table tbody tr:hover {
-            background: rgba(71, 85, 105, 0.18);
-        }
-
-        .sys-table tbody td {
-            font-size: 13px;
-            color: #cbd5e1;
-            padding: 8px 10px;
-            vertical-align: middle;
-        }
-
-        .sys-table tbody td code {
-            background: rgba(30, 41, 59, 0.7);
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #86efac;
-            font-family: Consolas, Menlo, monospace;
-        }
-
-        .action-cell {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .tag {
-            display: inline-block;
-            font-size: 11px;
-            padding: 1px 8px;
-            border-radius: 4px;
-            background: rgba(51, 65, 85, 0.5);
-            color: #cbd5e1;
-            margin-right: 4px;
-        }
-
-        .tag-success { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
-        .tag-warning { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
-        .tag-error   { background: rgba(239, 68, 68, 0.18);  color: #fca5a5; }
-        .tag-info    { background: rgba(6, 182, 212, 0.18);   color: #67e8f9; }
-
-        .sys-empty {
-            padding: 60px 20px;
-            text-align: center;
-            color: #94a3b8;
-            font-size: 14px;
-        }
-
-        .sys-empty .empty-emoji { font-size: 48px; margin-bottom: 8px; }
-
-        .sys-pagination {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(71, 85, 105, 0.35);
-            font-size: 13px;
-            color: #cbd5e1;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .sys-pagination .pg-left,
-        .sys-pagination .pg-right {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .sys-pagination select {
-            background: rgba(30, 41, 59, 0.9);
-            color: #e2e8f0;
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .role-list-mini {
-            display: inline-flex;
-            flex-wrap: wrap;
-            gap: 3px;
-            vertical-align: middle;
-        }
-        .role-list-mini .role-mini {
-            font-size: 11px;
-            padding: 0 6px;
-            border-radius: 4px;
-            background: rgba(99,102,241,0.18);
-            color: #c7d2fe;
-        }
-
-        .role-tag-select {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            padding: 8px 10px;
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px dashed rgba(71, 85, 105, 0.4);
-            border-radius: 8px;
-            margin-bottom: 6px;
-        }
-        .role-tag-select .role-opt {
-            cursor: pointer;
-            padding: 3px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            background: rgba(51, 65, 85, 0.55);
-            color: #cbd5e1;
-            border: 1px solid rgba(71, 85, 105, 0.4);
-            transition: all 0.15s ease;
-        }
-        .role-tag-select .role-opt.selected {
-            background: rgba(79, 70, 229, 0.35);
-            color: #e0e7ff;
-            border-color: rgba(99, 102, 241, 0.7);
-        }
-
-        @media (max-width: 1100px) {
-            .sys-side { width: 180px; }
-            .sys-searchbar input { min-width: 160px; }
-        }
-        @media (max-width: 800px) {
-            .sys-side { width: 120px; padding: 8px; }
-            .sys-tab-item .tab-label { font-size: 12px; }
-            .sys-tab-item .tab-count { display: none; }
-        }
-
-    </style>
-
+    <link rel="stylesheet" href="../css/system.css">
 </head>
-
 <body>
-
     <div id="app">
-
         <div class="bg-animation"></div>
+        
+        <div v-if="loadStatus" class="load-status" :class="loadStatusClass">{{ loadStatus }}</div>
 
         <main class="main-container">
-
             <div class="sys-wrap">
-
+                <!-- 侧边栏 - 标签页导航 -->
                 <aside class="sys-side">
                     <div class="sys-side-title">系统对象</div>
-
                     <div
                         v-for="tab in tabs"
                         :key="tab.key"
@@ -367,8 +31,8 @@
                     </div>
                 </aside>
 
+                <!-- 主内容区域 -->
                 <section class="sys-main">
-
                     <!-- 工具栏 -->
                     <div class="sys-toolbar">
                         <div class="sys-title">
@@ -394,8 +58,7 @@
 
                     <!-- 过滤条 -->
                     <div class="sys-filter-bar">
-
-                        <!-- 组织：状态 + 类型 + 父组织 -->
+                        <!-- 组织过滤条件 -->
                         <template v-if="currentTab === 'org'">
                             <label>状态</label>
                             <select v-model="orgFilter.status" @change="reloadList">
@@ -416,15 +79,13 @@
                             <label>父组织</label>
                             <select v-model="orgFilter.parent_id" @change="reloadList">
                                 <option value="">（顶级组织）</option>
-                                <option
-                                    v-for="p in orgParents"
-                                    :key="p.id"
-                                    :value="p.id"
-                                >{{ p.id }} · {{ p.org_name }}</option>
+                                <option v-for="p in orgParents" :key="p.id" :value="p.id">
+                                    {{ p.id }} · {{ p.org_name }}
+                                </option>
                             </select>
                         </template>
 
-                        <!-- 人员：状态 + 组织 -->
+                        <!-- 人员过滤条件 -->
                         <template v-if="currentTab === 'emp'">
                             <label>状态</label>
                             <select v-model="empFilter.status" @change="reloadList">
@@ -437,15 +98,13 @@
                             <label>所属组织</label>
                             <select v-model="empFilter.org_id" @change="reloadList">
                                 <option value="">全部</option>
-                                <option
-                                    v-for="o in orgParents"
-                                    :key="o.id"
-                                    :value="o.id"
-                                >{{ o.id }} · {{ o.org_name }}</option>
+                                <option v-for="o in orgParents" :key="o.id" :value="o.id">
+                                    {{ o.id }} · {{ o.org_name }}
+                                </option>
                             </select>
                         </template>
 
-                        <!-- 角色：状态 -->
+                        <!-- 角色过滤条件 -->
                         <template v-if="currentTab === 'role'">
                             <label>状态</label>
                             <select v-model="roleFilter.status" @change="reloadList">
@@ -456,7 +115,7 @@
                             </select>
                         </template>
 
-                        <!-- 智能员工：部门 -->
+                        <!-- 智能员工过滤条件 -->
                         <template v-if="currentTab === 'worker'">
                             <label>部门</label>
                             <input v-model="workerFilter.department" placeholder="部门关键字" @keyup.enter="doSearch">
@@ -472,10 +131,9 @@
                         </select>
                     </div>
 
-                    <!-- 列表 -->
+                    <!-- 数据列表 -->
                     <div class="sys-table-wrap">
-
-                        <!-- 组织 -->
+                        <!-- 组织列表 -->
                         <table v-if="currentTab === 'org' && paginatedList.length" class="sys-table">
                             <thead>
                                 <tr>
@@ -496,9 +154,7 @@
                                         <div style="font-weight:600;">{{ o.org_name }}</div>
                                         <div style="font-size:12px;color:#94a3b8;">{{ o.description || '' }}</div>
                                     </td>
-                                    <td>
-                                        <span class="tag">{{ o.org_type || '' }}</span>
-                                    </td>
+                                    <td><span class="tag">{{ o.org_type || '' }}</span></td>
                                     <td>
                                         <template v-if="o.parent_id">
                                             <code>{{ o.parent_id }}</code> <span class="tag tag-info">{{ getOrgNameById(o.parent_id) }}</span>
@@ -516,7 +172,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 人员 -->
+                        <!-- 人员列表 -->
                         <table v-if="currentTab === 'emp' && paginatedList.length" class="sys-table">
                             <thead>
                                 <tr>
@@ -561,7 +217,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 角色 -->
+                        <!-- 角色列表 -->
                         <table v-if="currentTab === 'role' && paginatedList.length" class="sys-table">
                             <thead>
                                 <tr>
@@ -590,7 +246,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 权限(员工-角色关联)：默认显示人员+角色，允许快速指派 -->
+                        <!-- 权限关联列表 -->
                         <table v-if="currentTab === 'perm' && paginatedList.length" class="sys-table">
                             <thead>
                                 <tr>
@@ -619,7 +275,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 智能员工 -->
+                        <!-- 智能员工列表 -->
                         <table v-if="currentTab === 'worker' && paginatedList.length" class="sys-table">
                             <thead>
                                 <tr>
@@ -656,7 +312,6 @@
                             <div class="empty-emoji">📭</div>
                             <p>{{ emptyHint }}</p>
                         </div>
-
                     </div>
 
                     <!-- 分页 -->
@@ -670,9 +325,7 @@
                             <span style="color:#94a3b8;font-size:12px;">权限 = 员工-角色 (M:N) 关联表的直接维护入口</span>
                         </div>
                     </div>
-
                 </section>
-
             </div>
 
             <!-- 通用增/改 弹窗 -->
@@ -683,18 +336,17 @@
                         <button class="modal-close" @click="showModal = false">×</button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-grid">
-
+                        <div class="sys-form-grid">
                             <!-- 组织表单 -->
                             <template v-if="currentTab === 'org'">
-                                <div class="form-group"><div class="form-label">组织编码 *</div>
+                                <div class="form-group required"><div class="form-label">组织编码</div>
                                     <input class="form-input" v-model="form.org_code" placeholder="如：/DEPT/SYS">
                                 </div>
-                                <div class="form-group"><div class="form-label">组织名称 *</div>
+                                <div class="form-group required"><div class="form-label">组织名称</div>
                                     <input class="form-input" v-model="form.org_name" placeholder="如：系统管理部">
                                 </div>
                                 <div class="form-group"><div class="form-label">组织类型</div>
-                                    <select class="form-input" v-model="form.org_type">
+                                    <select v-model="form.org_type">
                                         <option value="company">公司</option>
                                         <option value="department">部门</option>
                                         <option value="team">团队</option>
@@ -703,59 +355,55 @@
                                     </select>
                                 </div>
                                 <div class="form-group"><div class="form-label">上级组织</div>
-                                    <select class="form-input" v-model="form.parent_id">
+                                    <select v-model="form.parent_id">
                                         <option :value="null">（无顶级组织）</option>
-                                        <option
-                                            v-for="p in orgParents"
-                                            :key="p.id"
-                                            :value="p.id"
-                                        >{{ p.id }} · {{ p.org_name }}</option>
+                                        <option v-for="p in orgParents" :key="p.id" :value="p.id">
+                                            {{ p.id }} · {{ p.org_name }}
+                                        </option>
                                     </select>
                                 </div>
                                 <div class="form-group"><div class="form-label">排序</div>
                                     <input class="form-input" v-model="form.sort_order" type="number" placeholder="0">
                                 </div>
                                 <div class="form-group"><div class="form-label">状态</div>
-                                    <select class="form-input" v-model="form.status">
+                                    <select v-model="form.status">
                                         <option value="active">在用</option>
                                         <option value="disabled">停用</option>
                                         <option value="archived">归档</option>
                                     </select>
                                 </div>
-                                <div class="form-group" style="grid-column: 1/-1;"><div class="form-label">说明</div>
-                                    <textarea class="form-input" v-model="form.description" rows="3" placeholder="可选"></textarea>
+                                <div class="form-group full-width"><div class="form-label">说明</div>
+                                    <textarea v-model="form.description" rows="3" placeholder="可选"></textarea>
                                 </div>
                             </template>
 
                             <!-- 人员表单 -->
                             <template v-if="currentTab === 'emp'">
-                                <div class="form-group"><div class="form-label">工号 *</div>
+                                <div class="form-group required"><div class="form-label">工号</div>
                                     <input class="form-input" v-model="form.emp_code" placeholder="如：SYS0001">
                                 </div>
-                                <div class="form-group"><div class="form-label">姓名 *</div>
+                                <div class="form-group required"><div class="form-label">姓名</div>
                                     <input class="form-input" v-model="form.emp_name" placeholder="如：张三">
                                 </div>
                                 <div class="form-group"><div class="form-label">职位</div>
                                     <input class="form-input" v-model="form.position" placeholder="如：系统管理员">
                                 </div>
                                 <div class="form-group"><div class="form-label">所属组织</div>
-                                    <select class="form-input" v-model="form.org_id">
+                                    <select v-model="form.org_id">
                                         <option :value="null">（不选择）</option>
-                                        <option
-                                            v-for="o in orgParents"
-                                            :key="o.id"
-                                            :value="o.id"
-                                        >{{ o.id }} · {{ o.org_name }}</option>
+                                        <option v-for="o in orgParents" :key="o.id" :value="o.id">
+                                            {{ o.id }} · {{ o.org_name }}
+                                        </option>
                                     </select>
                                 </div>
                                 <div class="form-group"><div class="form-label">邮箱</div>
                                     <input class="form-input" v-model="form.email" placeholder="@">
                                 </div>
                                 <div class="form-group"><div class="form-label">电话</div>
-                                    <input class="form-input" v-model="form.phone" placeholder="11 位">
+                                    <input class="form-input" v-model="form.phone" placeholder="+86">
                                 </div>
                                 <div class="form-group"><div class="form-label">状态</div>
-                                    <select class="form-input" v-model="form.status">
+                                    <select v-model="form.status">
                                         <option value="active">在职</option>
                                         <option value="disabled">停用</option>
                                         <option value="archived">归档</option>
@@ -766,30 +414,30 @@
 
                             <!-- 角色表单 -->
                             <template v-if="currentTab === 'role'">
-                                <div class="form-group"><div class="form-label">角色编码 *</div>
-                                    <input class="form-input" v-model="form.role_code" placeholder="如：sys_admin">
+                                <div class="form-group required"><div class="form-label">角色编码</div>
+                                    <input class="form-input" v-model="form.role_code" placeholder="如：ROLE_ADMIN">
                                 </div>
-                                <div class="form-group"><div class="form-label">角色名称 *</div>
+                                <div class="form-group required"><div class="form-label">角色名称</div>
                                     <input class="form-input" v-model="form.role_name" placeholder="如：系统管理员">
                                 </div>
                                 <div class="form-group"><div class="form-label">状态</div>
-                                    <select class="form-input" v-model="form.status">
+                                    <select v-model="form.status">
                                         <option value="active">启用</option>
                                         <option value="disabled">停用</option>
                                         <option value="archived">归档</option>
                                     </select>
                                 </div>
-                                <div class="form-group" style="grid-column: 1/-1;"><div class="form-label">说明</div>
-                                    <textarea class="form-input" v-model="form.description" rows="3" placeholder="可选"></textarea>
+                                <div class="form-group full-width"><div class="form-label">说明</div>
+                                    <textarea v-model="form.description" rows="3" placeholder="可选"></textarea>
                                 </div>
                             </template>
 
                             <!-- 智能员工表单 -->
                             <template v-if="currentTab === 'worker'">
-                                <div class="form-group"><div class="form-label">员工ID *</div>
+                                <div class="form-group required"><div class="form-label">员工ID</div>
                                     <input class="form-input" v-model="form.employee_id" placeholder="如：W-SYS-001">
                                 </div>
-                                <div class="form-group"><div class="form-label">姓名 *</div>
+                                <div class="form-group required"><div class="form-label">姓名</div>
                                     <input class="form-input" v-model="form.name" placeholder="如：仿真助手">
                                 </div>
                                 <div class="form-group"><div class="form-label">部门</div>
@@ -798,11 +446,10 @@
                                 <div class="form-group"><div class="form-label">日工作小时</div>
                                     <input class="form-input" v-model="form.daily_work_hours" type="number" step="0.5" min="0.5" max="24" value="8">
                                 </div>
-                                <div class="form-group" style="grid-column: 1/-1;"><div class="form-label">角色（多选，回车/逗号分隔）</div>
+                                <div class="form-group full-width"><div class="form-label">角色（多选，回车/逗号分隔）</div>
                                     <input class="form-input" v-model="form.roles_raw" placeholder="如：指挥员,参谋,执行人员">
                                 </div>
                             </template>
-
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -824,17 +471,11 @@
                     <div class="modal-body">
                         <p style="font-size:12px;color:#94a3b8;margin-bottom:8px;">选中/取消选中即完成权限变更。</p>
                         <div class="role-tag-select">
-                            <span
-                                v-for="r in allRoles"
-                                :key="r.id"
-                                class="role-opt"
-                                :class="{ selected: selectedRoleIds.indexOf(r.id) !== -1 }"
-                                @click="toggleEmployeeRole(r.id)"
-                            >
+                            <span v-for="r in allRoles" :key="r.id" class="role-opt" :class="{ selected: selectedRoleIds.indexOf(r.id) !== -1 }" @click="toggleEmployeeRole(r.id)">
                                 {{ r.role_name }}
                                 <span style="color:#94a3b8;font-size:11px;">[{{ r.role_code }}]</span>
                             </span>
-                            <span v-if="!allRoles.length" style="color:#94a3b8;font-size:12px;">（当前无可用角色，请先在“角色”页签创建）</span>
+                            <span v-if="!allRoles.length" style="color:#94a3b8;font-size:12px;">（当前无可用角色，请先在"角色"页签创建）</span>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -842,15 +483,11 @@
                     </div>
                 </div>
             </div>
-
         </main>
-
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="../js/simulation_plant_common.js"></script>
-    <script src="../js/system.js"></script>
-
+    <script src="../js/simulation_plant_common.js?v=2026062901"></script>
+    <script src="../js/system.js?v=2026062901"></script>
 </body>
-
 </html>
