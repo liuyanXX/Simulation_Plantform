@@ -42,6 +42,8 @@ createApp({
         const allRoles = ref([]);
         const employeeRoles = ref({});
 
+        const orgTypeLabels = { COMPANY: '公司', DEPARTMENT: '部门', TEAM: '团队', GROUP: '小组', ORG: '其它' };
+        function orgTypeLabel(v) { return orgTypeLabels[v] || v || '-'; }
         const orgFilter = reactive({ status: '', org_type: '', parent_id: '' });
         const empFilter = reactive({ status: '', org_id: '' });
         const roleFilter = reactive({ status: '' });
@@ -53,7 +55,7 @@ createApp({
         const isEditing = ref(false);
         const form = reactive({
             _edit_id: null,
-            org_code: '', org_name: '', org_type: 'department', parent_id: null,
+            org_code: '', org_name: '', org_type: 'DEPARTMENT', parent_id: null,
             sort_order: 0, status: 'active', description: '',
             emp_code: '', emp_name: '', position: '', org_id: null,
             email: '', phone: '',
@@ -289,7 +291,7 @@ createApp({
         function resetForm() {
             Object.assign(form, {
                 _edit_id: null,
-                org_code: '', org_name: '', org_type: 'department', parent_id: null,
+                org_code: '', org_name: '', org_type: 'DEPARTMENT', parent_id: null,
                 sort_order: 0, status: 'active', description: '',
                 emp_code: '', emp_name: '', position: '', org_id: null,
                 email: '', phone: '',
@@ -324,7 +326,7 @@ createApp({
                 _edit_id: o.id,
                 org_code: o.org_code || '',
                 org_name: o.org_name || '',
-                org_type: o.org_type || 'department',
+                org_type: o.org_type || 'DEPARTMENT',
                 parent_id: o.parent_id,
                 sort_order: o.sort_order || 0,
                 status: o.status || 'active',
@@ -587,6 +589,7 @@ createApp({
             totalPages, paginatedList, emptyHint,
             // helpers
             statusLabel, statusClass,
+            orgTypeLabel,
             getOrgNameById,
             // actions
             selectTab, reloadList, doSearch, clearSearch,

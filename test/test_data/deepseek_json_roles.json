@@ -1,0 +1,625 @@
+{
+  "roles": [
+    {
+      "role_code": "R1_01",
+      "role_name": "首席执行官",
+      "description": "全面负责公司经营，制定整体战略方向，主抓战略客户与财务指标。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 1,
+      "org_node_name": "哪都通数据科技有限公司"
+    },
+    {
+      "role_code": "R1_02",
+      "role_name": "首席技术官",
+      "description": "统筹技术中台建设、核心技术攻关、研发效能提升及技术人才梯队培养。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 1,
+      "org_node_name": "哪都通数据科技有限公司"
+    },
+    {
+      "role_code": "R1_03",
+      "role_name": "首席数据官",
+      "description": "主导数据资产沉淀、AI模型研发及数据安全合规，强化公司数据科技属性。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 1,
+      "org_node_name": "哪都通数据科技有限公司"
+    },
+    {
+      "role_code": "R2_01",
+      "role_name": "研发中心总监",
+      "description": "全面负责产品研发中心的日常管理、技术决策与版本迭代规划。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 2,
+      "org_node_name": "产品研发中心"
+    },
+    {
+      "role_code": "R2_02",
+      "role_name": "研发项目经理",
+      "description": "负责具体产品的需求拆解、迭代排期、跨组协调及交付进度管控。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 2,
+      "org_node_name": "产品研发中心"
+    },
+    {
+      "role_code": "R2_03",
+      "role_name": "研发质量负责人",
+      "description": "制定研发规范与代码质量标准，组织技术评审，保障平台化组件沉淀。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 2,
+      "org_node_name": "产品研发中心"
+    },
+    {
+      "role_code": "R3_01",
+      "role_name": "首席架构师",
+      "description": "负责全局技术选型、微服务架构设计及核心基础框架的搭建与演进。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 3,
+      "org_node_name": "架构组"
+    },
+    {
+      "role_code": "R3_02",
+      "role_name": "后端架构师",
+      "description": "专注业务中台与数据中台的领域模型设计及接口契约定义。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 3,
+      "org_node_name": "架构组"
+    },
+    {
+      "role_code": "R3_03",
+      "role_name": "基础设施架构师",
+      "description": "负责云原生基础设施、容器化编排及中间件的高可用方案设计。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 3,
+      "org_node_name": "架构组"
+    },
+    {
+      "role_code": "R4_01",
+      "role_name": "后端技术负责人",
+      "description": "带领后端团队攻克技术难题，把控代码质量，制定开发规范。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 4,
+      "org_node_name": "后端开发组"
+    },
+    {
+      "role_code": "R4_02",
+      "role_name": "Java开发专家",
+      "description": "负责高并发业务模块的开发与性能优化，沉淀公用业务组件。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 4,
+      "org_node_name": "后端开发组"
+    },
+    {
+      "role_code": "R4_03",
+      "role_name": "Python开发专家",
+      "description": "负责数据处理接口、算法服务封装及运维自动化脚本开发。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 4,
+      "org_node_name": "后端开发组"
+    },
+    {
+      "role_code": "R5_01",
+      "role_name": "前端技术负责人",
+      "description": "制定前端技术栈规范，负责核心组件库建设与性能优化。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 5,
+      "org_node_name": "前端/移动端组"
+    },
+    {
+      "role_code": "R5_02",
+      "role_name": "高级前端工程师",
+      "description": "负责Web端管理后台及可视化大屏的前端开发与交互实现。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 5,
+      "org_node_name": "前端/移动端组"
+    },
+    {
+      "role_code": "R5_03",
+      "role_name": "移动端工程师",
+      "description": "负责小程序及App（混合/原生）的跨端开发与发版维护。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 5,
+      "org_node_name": "前端/移动端组"
+    },
+    {
+      "role_code": "R6_01",
+      "role_name": "测试负责人",
+      "description": "统筹测试策略，搭建自动化测试框架，输出质量度量报告。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 6,
+      "org_node_name": "测试与质量组"
+    },
+    {
+      "role_code": "R6_02",
+      "role_name": "自动化测试专家",
+      "description": "负责接口自动化、UI自动化脚本的编写与维护，提升回归效率。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 6,
+      "org_node_name": "测试与质量组"
+    },
+    {
+      "role_code": "R6_03",
+      "role_name": "性能测试工程师",
+      "description": "负责系统压测、瓶颈定位及调优验证，保障平台在高并发下的稳定性。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 6,
+      "org_node_name": "测试与质量组"
+    },
+    {
+      "role_code": "R7_01",
+      "role_name": "运维负责人",
+      "description": "负责DevOps体系建设、生产环境稳定性保障及应急预案制定。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 7,
+      "org_node_name": "运维与安全组"
+    },
+    {
+      "role_code": "R7_02",
+      "role_name": "安全合规专家",
+      "description": "负责网络安全等级保护、渗透测试、漏洞修复及数据合规审查。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 7,
+      "org_node_name": "运维与安全组"
+    },
+    {
+      "role_code": "R7_03",
+      "role_name": "DevOps工程师",
+      "description": "负责CI/CD流水线搭建、日志监控系统（ELK/Prometheus）维护。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 7,
+      "org_node_name": "运维与安全组"
+    },
+    {
+      "role_code": "R8_01",
+      "role_name": "数据智能总监",
+      "description": "全面负责数据智能中心的战略规划、团队管理与数据产品路线制定。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 8,
+      "org_node_name": "数据智能中心"
+    },
+    {
+      "role_code": "R8_02",
+      "role_name": "数据产品经理",
+      "description": "负责数据中台与BI产品的需求定义、场景设计及对内对外价值交付。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 8,
+      "org_node_name": "数据智能中心"
+    },
+    {
+      "role_code": "R8_03",
+      "role_name": "数据治理专家",
+      "description": "制定数据质量标准、主数据管理规范及元数据管理体系。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 8,
+      "org_node_name": "数据智能中心"
+    },
+    {
+      "role_code": "R9_01",
+      "role_name": "采集组负责人",
+      "description": "负责数据采集任务的调度管理、反爬策略应对及采集源稳定性保障。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 9,
+      "org_node_name": "数据采集与治理组"
+    },
+    {
+      "role_code": "R9_02",
+      "role_name": "爬虫工程师",
+      "description": "负责分布式爬虫开发、网页解析及数据抓取逻辑维护。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 9,
+      "org_node_name": "数据采集与治理组"
+    },
+    {
+      "role_code": "R9_03",
+      "role_name": "日志分析工程师",
+      "description": "负责业务日志、系统日志的采集清洗与结构化处理，对接数仓。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 9,
+      "org_node_name": "数据采集与治理组"
+    },
+    {
+      "role_code": "R10_01",
+      "role_name": "数仓负责人",
+      "description": "主导数据仓库分层建模（ODS/DWD/DWS/ADS）及ETL架构设计。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 10,
+      "org_node_name": "数据仓库与BI组"
+    },
+    {
+      "role_code": "R10_02",
+      "role_name": "ETL开发专家",
+      "description": "负责数据清洗、转换、加载任务的开发及调度（Airflow/DolphinScheduler）。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 10,
+      "org_node_name": "数据仓库与BI组"
+    },
+    {
+      "role_code": "R10_03",
+      "role_name": "BI开发专家",
+      "description": "负责可视化大屏、管理报表及自助分析看板的开发与数据呈现。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 10,
+      "org_node_name": "数据仓库与BI组"
+    },
+    {
+      "role_code": "R11_01",
+      "role_name": "算法负责人",
+      "description": "带领算法团队进行前沿模型调研、技术选型及算法工程化落地。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 11,
+      "org_node_name": "算法与AI应用组"
+    },
+    {
+      "role_code": "R11_02",
+      "role_name": "NLP算法工程师",
+      "description": "负责文本分类、实体识别、语义检索等自然语言处理任务的模型训练。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 11,
+      "org_node_name": "算法与AI应用组"
+    },
+    {
+      "role_code": "R11_03",
+      "role_name": "CV算法工程师",
+      "description": "负责图像识别、OCR、目标检测等计算机视觉任务的模型开发与调优。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 11,
+      "org_node_name": "算法与AI应用组"
+    },
+    {
+      "role_code": "R12_01",
+      "role_name": "交付中心总监",
+      "description": "全面负责项目交付、售前方案质量及客户满意度，确保利润变现。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 12,
+      "org_node_name": "解决方案与交付中心"
+    },
+    {
+      "role_code": "R12_02",
+      "role_name": "解决方案架构师",
+      "description": "深入理解客户需求，输出高性价比的技术方案、报价清单与交付蓝图。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 12,
+      "org_node_name": "解决方案与交付中心"
+    },
+    {
+      "role_code": "R12_03",
+      "role_name": "交付项目经理",
+      "description": "负责项目全生命周期管理（计划、执行、监控、验收），协调内外部资源。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 12,
+      "org_node_name": "解决方案与交付中心"
+    },
+    {
+      "role_code": "R13_01",
+      "role_name": "售前组负责人",
+      "description": "统筹售前咨询、Demo演示规划及投标技术文件的编写质量。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 13,
+      "org_node_name": "售前与方案组"
+    },
+    {
+      "role_code": "R13_02",
+      "role_name": "方案咨询顾问",
+      "description": "配合销售进行客户需求调研、痛点分析并撰写针对性的技术建议书。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 13,
+      "org_node_name": "售前与方案组"
+    },
+    {
+      "role_code": "R13_03",
+      "role_name": "Demo开发工程师",
+      "description": "负责搭建产品演示环境、制作场景化Demo脚本并支持现场演示。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 13,
+      "org_node_name": "售前与方案组"
+    },
+    {
+      "role_code": "R14_01",
+      "role_name": "实施组负责人",
+      "description": "负责实施团队的资源调配、现场交付进度及客户培训组织。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 14,
+      "org_node_name": "项目实施组"
+    },
+    {
+      "role_code": "R14_02",
+      "role_name": "部署运维工程师",
+      "description": "负责客户现场的私有化环境部署、系统安装及上线割接支持。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 14,
+      "org_node_name": "项目实施组"
+    },
+    {
+      "role_code": "R14_03",
+      "role_name": "数据迁移工程师",
+      "description": "负责客户历史数据的抽取、清洗转换及导入新系统的校验工作。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 14,
+      "org_node_name": "项目实施组"
+    },
+    {
+      "role_code": "R15_01",
+      "role_name": "售后组负责人",
+      "description": "建立售后服务体系，管理工单响应时效与重大故障处理流程。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 15,
+      "org_node_name": "售后技术支持组"
+    },
+    {
+      "role_code": "R15_02",
+      "role_name": "高级技术支持（L3）",
+      "description": "处理疑难杂症、代码级问题排查及复杂性能调优。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 15,
+      "org_node_name": "售后技术支持组"
+    },
+    {
+      "role_code": "R15_03",
+      "role_name": "一线技术支持（L2）",
+      "description": "负责日常工单响应、客户操作指导及环境巡检与问题初筛。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 15,
+      "org_node_name": "售后技术支持组"
+    },
+    {
+      "role_code": "R16_01",
+      "role_name": "市场销售总监",
+      "description": "统筹市场推广、销售策略及渠道建设，达成公司营收目标。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 16,
+      "org_node_name": "市场与销售中心"
+    },
+    {
+      "role_code": "R16_02",
+      "role_name": "品牌推广经理",
+      "description": "负责行业品牌定位、媒体矩阵运营及标杆案例包装宣传。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 16,
+      "org_node_name": "市场与销售中心"
+    },
+    {
+      "role_code": "R16_03",
+      "role_name": "大客户总监",
+      "description": "带领大客户销售团队攻坚重点B端/G端客户，签订战略级合同。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 16,
+      "org_node_name": "市场与销售中心"
+    },
+    {
+      "role_code": "R17_01",
+      "role_name": "大客户销售负责人",
+      "description": "负责大客户商机挖掘、商务谈判、招投标主导及客户关系维护。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 17,
+      "org_node_name": "大客户销售组"
+    },
+    {
+      "role_code": "R17_02",
+      "role_name": "B端销售专家",
+      "description": "聚焦企业级市场，负责软件产品及数据服务的商机拓展与成单。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 17,
+      "org_node_name": "大客户销售组"
+    },
+    {
+      "role_code": "R17_03",
+      "role_name": "G端销售专家",
+      "description": "专注政府及公共事业领域，跟进智慧城市、政务数字化等项目。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 17,
+      "org_node_name": "大客户销售组"
+    },
+    {
+      "role_code": "R18_01",
+      "role_name": "渠道生态负责人",
+      "description": "搭建全国渠道代理网络，制定渠道政策、赋能计划与业绩考核。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 18,
+      "org_node_name": "渠道与生态组"
+    },
+    {
+      "role_code": "R18_02",
+      "role_name": "渠道拓展经理",
+      "description": "负责区域代理商的招募、培训及日常业务协同支持。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 18,
+      "org_node_name": "渠道与生态组"
+    },
+    {
+      "role_code": "R18_03",
+      "role_name": "生态合作运营",
+      "description": "负责与大数据厂商、云厂商、ISV伙伴的技术合作与联合方案打磨。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 18,
+      "org_node_name": "渠道与生态组"
+    },
+    {
+      "role_code": "R19_01",
+      "role_name": "市场运营负责人",
+      "description": "统筹线上线下市场活动，挖掘销售线索，提升获客转化效率。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 19,
+      "org_node_name": "市场运营组"
+    },
+    {
+      "role_code": "R19_02",
+      "role_name": "内容营销专家",
+      "description": "负责技术白皮书、案例文章、短视频等内容产出及SEO/SEM优化。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 19,
+      "org_node_name": "市场运营组"
+    },
+    {
+      "role_code": "R19_03",
+      "role_name": "活动策划专员",
+      "description": "负责行业峰会、技术沙龙、线上研讨会等活动的策划与落地执行。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 19,
+      "org_node_name": "市场运营组"
+    },
+    {
+      "role_code": "R20_01",
+      "role_name": "运营支撑总监",
+      "description": "统筹公司HR、行政、财务及IT内务，为业务前端提供高效后勤保障。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 20,
+      "org_node_name": "运营与支撑中心"
+    },
+    {
+      "role_code": "R20_02",
+      "role_name": "人力资源伙伴（HRBP）",
+      "description": "深入业务部门解决人才梯队、绩效激励及员工关系问题。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 20,
+      "org_node_name": "运营与支撑中心"
+    },
+    {
+      "role_code": "R20_03",
+      "role_name": "财务管控负责人",
+      "description": "负责公司整体预算编制、成本监控、现金流管理及经营分析报告。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 20,
+      "org_node_name": "运营与支撑中心"
+    },
+    {
+      "role_code": "R21_01",
+      "role_name": "HR负责人",
+      "description": "制定人力资源规划，完善薪酬福利体系及员工职业发展通道。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 21,
+      "org_node_name": "人力资源组"
+    },
+    {
+      "role_code": "R21_02",
+      "role_name": "招聘调配专员",
+      "description": "负责技术岗位与社会招聘全流程，搭建人才库并优化面试体验。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 21,
+      "org_node_name": "人力资源组"
+    },
+    {
+      "role_code": "R21_03",
+      "role_name": "培训发展专员",
+      "description": "组织新员工培训、技术分享及管理能力提升项目，推动学习型组织。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 21,
+      "org_node_name": "人力资源组"
+    },
+    {
+      "role_code": "R22_01",
+      "role_name": "财务负责人",
+      "description": "负责财务核算、税务筹划、资金调度及财务内控制度建立。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 22,
+      "org_node_name": "财务与内控组"
+    },
+    {
+      "role_code": "R22_02",
+      "role_name": "成本管控专家",
+      "description": "负责项目制成本核算、研发费用归集及预算执行偏差分析。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 22,
+      "org_node_name": "财务与内控组"
+    },
+    {
+      "role_code": "R22_03",
+      "role_name": "内控审计专员",
+      "description": "负责内部流程合规审查、合同财务条款审核及风险事项预警。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 22,
+      "org_node_name": "财务与内控组"
+    },
+    {
+      "role_code": "R23_01",
+      "role_name": "行政负责人",
+      "description": "统筹办公环境管理、资产采购、后勤保障及员工福利活动组织。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 23,
+      "org_node_name": "行政与综合组"
+    },
+    {
+      "role_code": "R23_02",
+      "role_name": "资产管理专员",
+      "description": "负责固定资产出入库登记、盘点维护及IT设备生命周期管理。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 23,
+      "org_node_name": "行政与综合组"
+    },
+    {
+      "role_code": "R23_03",
+      "role_name": "内部IT运维",
+      "description": "负责公司内部网络、会议系统、邮件服务器及办公系统的日常维护。",
+      "status": "active",
+      "created_at": "2026-06-29 21:25:00",
+      "org_node_id": 23,
+      "org_node_name": "行政与综合组"
+    }
+  ]
+}

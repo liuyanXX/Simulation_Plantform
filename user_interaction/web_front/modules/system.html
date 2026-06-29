@@ -70,11 +70,11 @@
                             <label>类型</label>
                             <select v-model="orgFilter.org_type" @change="reloadList">
                                 <option value="">全部</option>
-                                <option value="company">公司</option>
-                                <option value="department">部门</option>
-                                <option value="team">团队</option>
-                                <option value="group">小组</option>
-                                <option value="other">其它</option>
+                                <option value="COMPANY">公司</option>
+                                <option value="DEPARTMENT">部门</option>
+                                <option value="TEAM">团队</option>
+                                <option value="GROUP">小组</option>
+                                <option value="ORG">其它</option>
                             </select>
                             <label>父组织</label>
                             <select v-model="orgFilter.parent_id" @change="reloadList">
@@ -154,7 +154,7 @@
                                         <div style="font-weight:600;">{{ o.org_name }}</div>
                                         <div style="font-size:12px;color:#94a3b8;">{{ o.description || '' }}</div>
                                     </td>
-                                    <td><span class="tag">{{ o.org_type || '' }}</span></td>
+                                    <td><span class="tag">{{ orgTypeLabel(o.org_type) }}</span></td>
                                     <td>
                                         <template v-if="o.parent_id">
                                             <code>{{ o.parent_id }}</code> <span class="tag tag-info">{{ getOrgNameById(o.parent_id) }}</span>
@@ -347,11 +347,11 @@
                                 </div>
                                 <div class="form-group"><div class="form-label">组织类型</div>
                                     <select v-model="form.org_type">
-                                        <option value="company">公司</option>
-                                        <option value="department">部门</option>
-                                        <option value="team">团队</option>
-                                        <option value="group">小组</option>
-                                        <option value="other">其它</option>
+                                        <option value="COMPANY">公司</option>
+                                        <option value="DEPARTMENT">部门</option>
+                                        <option value="TEAM">团队</option>
+                                        <option value="GROUP">小组</option>
+                                        <option value="ORG">其它</option>
                                     </select>
                                 </div>
                                 <div class="form-group"><div class="form-label">上级组织</div>
@@ -487,7 +487,7 @@
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="../js/simulation_plant_common.js?v=2026062901"></script>
-    <script src="../js/system.js?v=2026062901"></script>
+    <script src="../js/simulation_plant_common.js?v=2026062902"></script>
+    <script src="../js/system.js?v=2026062902"></script>
 </body>
 </html>
