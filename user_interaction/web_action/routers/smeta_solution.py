@@ -102,9 +102,9 @@ async def list_solutions(
                 "status": flat.get("status", ""),
                 "category": flat.get("category", ""),
                 "summary": flat.get("summary", ""),
-                "main_docs_count": len(flat.get("key_main_docs", []) or []),
-                "attachments_count": len(flat.get("key_attachments", []) or []),
-                "references_count": len(flat.get("key_references", []) or []),
+                "main_docs_count": len(flat.get("doc_main_docs", []) or []),
+                "attachments_count": len(flat.get("doc_attachments", []) or []),
+                "references_count": len(flat.get("doc_references", []) or []),
                 "created_at": flat.get("created_at", ""),
                 "updated_at": flat.get("updated_at", ""),
             })
@@ -137,9 +137,78 @@ async def get_solution_detail(solution_id: str = Query(...)):
             return _err("方案不存在", 404)
         
         flat = solution.to_flat_dict()
+        # 补充前端展示所需的派生字段
+        flat["version_label"] = solution.version_label
+        flat["main_docs_count"] = len(flat.get("doc_main_docs", []) or [])
+        flat["attachments_count"] = len(flat.get("doc_attachments", []) or [])
+        flat["references_count"] = len(flat.get("doc_references", []) or [])
+
+        # 组装文档列表（含文件名与下载所需的 file_id），供前端展示与下载
+        def _build_docs(file_ids, category):
+            sub = {"main": "main_docs", "att": "attachments", "ref": "references"}[category]
+            doc_dir = os.path.join(SOLUTIONS_DIR, solution_id, sub)
+            items = []
+            for fid in (file_ids or []):
+                file_name = fid
+                if os.path.isdir(doc_dir):
+                    for fn in os.listdir(doc_dir):
+                        if os.path.splitext(fn)[0] == fid:
+                            file_name = fn
+                            break
+                items.append({"file_id": fid, "file_name": file_name})
+            return items
+
+        flat["main_docs_list"] = _build_docs(flat.get("doc_main_docs", []), "main")
+        flat["attachments_list"] = _build_docs(flat.get("doc_attachments", []), "att")
+        flat["references_list"] = _build_docs(flat.get("doc_references", []), "ref")
         return _ok(flat)
     except Exception as e:
         return _err(f"查询方案详情失败: {e}")
+
+
+@router.get("/download")
+async def download_solution_doc(file_id: str = Query(...)):
+    """下载方案文档。
+
+    file_id 形如 {solution_id}_{main|att|ref}_{idx}，
+    文件按 Files/Solutions/{solution_id}/{main_docs|attachments|references}/{file_id}{ext} 存储。
+    """
+    from fastapi.responses import FileResponse
+    from urllib.parse import quote
+    try:
+        # 解析 file_id 中的方案ID与类别
+        if "_main_" in file_id:
+            solution_id, sub = file_id.split("_main_")[0], "main_docs"
+        elif "_att_" in file_id:
+            solution_id, sub = file_id.split("_att_")[0], "attachments"
+        elif "_ref_" in file_id:
+            solution_id, sub = file_id.split("_ref_")[0], "references"
+        else:
+            return _err("非法的文件标识", 400)
+
+        doc_dir = os.path.join(SOLUTIONS_DIR, solution_id, sub)
+        if not os.path.isdir(doc_dir):
+            return _err("文件不存在", 404)
+
+        target = None
+        for fn in os.listdir(doc_dir):
+            if os.path.splitext(fn)[0] == file_id:
+                target = os.path.join(doc_dir, fn)
+                break
+        if not target or not os.path.isfile(target):
+            return _err("文件不存在", 404)
+
+        filename = os.path.basename(target)
+        return FileResponse(
+            target,
+            media_type="application/octet-stream",
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+            },
+        )
+    except Exception as e:
+        return _err(f"下载文档失败: {e}")
 
 
 @router.post("/create")

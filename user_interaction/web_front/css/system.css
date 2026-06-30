@@ -519,3 +519,880 @@
     .sys-tab-item .tab-label { font-size: 12px; }
     .sys-tab-item .tab-count { display: none; }
 }
+
+/* ============ 方案详情弹窗 ============ */
+.modal-content.solution-detail-modal {
+    max-width: 760px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.solution-detail-modal .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.modal-content.solution-detail-modal .detail-section {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    border-radius: 12px;
+    padding: 14px 16px 16px;
+}
+
+.modal-content.solution-detail-modal .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #93c5fd;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(71, 85, 105, 0.4);
+    letter-spacing: 0.5px;
+}
+
+.modal-content.solution-detail-modal .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 20px;
+}
+
+.modal-content.solution-detail-modal .detail-grid.stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.modal-content.solution-detail-modal .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.modal-content.solution-detail-modal .detail-item.span-2 {
+    grid-column: 1 / -1;
+}
+
+.modal-content.solution-detail-modal .detail-label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.modal-content.solution-detail-modal .detail-value {
+    font-size: 14px;
+    color: #e2e8f0;
+    word-break: break-all;
+    line-height: 1.6;
+}
+
+.modal-content.solution-detail-modal .detail-value.mono {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.modal-content.solution-detail-modal .detail-value.strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.modal-content.solution-detail-modal .detail-empty {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.modal-content.solution-detail-modal .detail-stat {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    border-radius: 10px;
+    padding: 14px 12px;
+    text-align: center;
+}
+
+.modal-content.solution-detail-modal .detail-stat .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #60a5fa;
+    line-height: 1.2;
+}
+
+.modal-content.solution-detail-modal .detail-stat .stat-label {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.modal-content.solution-detail-modal .detail-summary {
+    font-size: 14px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+@media (max-width: 640px) {
+    .modal-content.solution-detail-modal .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    .modal-content.solution-detail-modal .detail-grid.stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* ============================================================
+   方案文档列表页 —— 视觉层级与交互优化
+   ============================================================ */
+.solution-list-page .page-title {
+    position: relative;
+    padding-left: 16px;
+}
+.solution-list-page .page-title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 26px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #818cf8, #4f46e5);
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.6);
+}
+
+/* 卡片容器：增加纵深与顶部高光 */
+.solution-list-page .card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(20, 28, 46, 0.85));
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    box-shadow: 0 12px 40px rgba(2, 6, 23, 0.45);
+}
+.solution-list-page .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(129, 140, 248, 0.5), transparent);
+}
+
+/* 卡片标题图标：渐变化 + 发光 */
+.solution-list-page .card-icon {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.15)) !important;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+}
+
+/* 列表项：左侧强调条 + 分层背景 + 动效 */
+.solution-list-page .list-container {
+    gap: 14px;
+}
+
+.solution-list-page .list-item {
+    position: relative;
+    overflow: hidden;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px 20px 16px 22px;
+    background: linear-gradient(180deg, rgba(17, 25, 43, 0.55), rgba(15, 23, 42, 0.4));
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 14px;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+/* 左侧强调条 —— 默认隐形，hover/选中浮现 */
+.solution-list-page .list-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #818cf8, #4f46e5);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.solution-list-page .list-item:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.75), rgba(23, 32, 54, 0.6));
+    border-color: rgba(129, 140, 248, 0.4);
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+}
+.solution-list-page .list-item:hover::before { opacity: 1; }
+
+.solution-list-page .list-item.selected {
+    border-color: rgba(129, 140, 248, 0.6);
+    background: linear-gradient(180deg, rgba(49, 46, 129, 0.35), rgba(30, 41, 59, 0.5));
+}
+.solution-list-page .list-item.selected::before { opacity: 1; }
+
+/* 主体可点区域 */
+.solution-list-page .list-item-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* 自定义复选框 */
+.solution-list-page .checkbox {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 4px;
+    border-radius: 6px;
+    border: 1.5px solid rgba(148, 163, 184, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+    background: rgba(15, 23, 42, 0.6);
+    transition: all 0.2s ease;
+}
+.solution-list-page .checkbox.checked {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-color: #818cf8;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+/* 文档图标：渐变方块 */
+.solution-list-page .item-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(56, 189, 248, 0.12));
+    border: 1px solid rgba(129, 140, 248, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* 文本内容区 */
+.solution-list-page .item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.solution-list-page .item-title {
+    font-size: 16px;
+    font-weight: 650;
+    color: #f1f5f9;
+    letter-spacing: 0.2px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.solution-list-page .item-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.solution-list-page .item-sub .tag-sm {
+    font-size: 11.5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.solution-list-page .meta-sm {
+    font-size: 12px;
+    color: #64748b;
+    margin-left: 2px;
+}
+
+/* 摘要：限制两行 */
+.solution-list-page .item-meta {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 操作按钮区 */
+.solution-list-page .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-left: 8px;
+}
+
+.solution-list-page .item-actions .btn-sm {
+    padding: 7px 16px;
+    font-size: 13px;
+    border-radius: 9px;
+    background: rgba(51, 65, 85, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    transition: all 0.2s ease;
+}
+.solution-list-page .item-actions .btn-sm:hover {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-color: #818cf8;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+}
+.solution-list-page .item-actions .btn-danger-sm {
+    color: #fca5a5;
+}
+.solution-list-page .item-actions .btn-danger-sm:hover {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-color: #f87171;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+}
+
+/* 空状态优化 */
+.solution-list-page .empty-state {
+    padding: 56px 20px;
+    color: #64748b;
+}
+.solution-list-page .empty-state > div {
+    opacity: 0.6;
+    margin-bottom: 8px;
+}
+
+/* 列表项入场动画 */
+.solution-list-page .list-item {
+    animation: solItemIn 0.35s ease both;
+}
+@keyframes solItemIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 720px) {
+    .solution-list-page .list-item {
+        flex-direction: column;
+    }
+    .solution-list-page .item-actions {
+        padding-left: 0;
+        justify-content: flex-end;
+        border-top: 1px dashed rgba(148, 163, 184, 0.15);
+        padding-top: 12px;
+    }
+}
+
+/* ============================================================
+   新增方案弹窗 —— 分区 / 上传 视觉与交互优化
+   ============================================================ */
+.modal-container.sol-create-modal {
+    max-width: 920px;
+}
+
+/* 头部：图标 + 主副标题 */
+.sol-create-modal .sol-modal-title,
+.sol-detail-modal .sol-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.sol-create-modal .sol-modal-icon,
+.sol-detail-modal .sol-modal-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.28), rgba(56, 189, 248, 0.14));
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+}
+.sol-create-modal .sol-modal-sub,
+.sol-detail-modal .sol-modal-sub {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.sol-create-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 24px;
+}
+.sol-create-modal .modal-body > * {
+    flex-shrink: 0;
+}
+
+/* 分区卡片 */
+.sol-create-modal .sol-section,
+.sol-detail-modal .sol-section {
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(71, 85, 105, 0.32);
+    border-radius: 14px;
+    padding: 16px 18px 18px;
+}
+
+.sol-create-modal .sol-section-head,
+.sol-detail-modal .sol-section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed rgba(71, 85, 105, 0.4);
+}
+.sol-create-modal .sol-section-bar,
+.sol-detail-modal .sol-section-bar {
+    width: 4px;
+    height: 16px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #818cf8, #4f46e5);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.55);
+}
+.sol-create-modal .sol-section-name,
+.sol-detail-modal .sol-section-name {
+    font-size: 14px;
+    font-weight: 650;
+    color: #e2e8f0;
+    letter-spacing: 0.3px;
+}
+.sol-create-modal .sol-section-hint,
+.sol-detail-modal .sol-section-hint {
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* 标签输入容器：聚焦态 + 标签可交互反馈 */
+.sol-create-modal .tag-input-container {
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.sol-create-modal .tag-input-container:focus-within {
+    border-color: rgba(99, 102, 241, 0.6);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+.sol-create-modal .tag-input-container .tag {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.18));
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    transition: transform 0.15s ease;
+}
+.sol-create-modal .tag-input-container .tag:hover {
+    transform: translateY(-1px);
+}
+.sol-create-modal .tag-input-container .tag-remove:hover {
+    color: #fca5a5;
+    opacity: 1;
+}
+.sol-create-modal .tag-input {
+    flex: 1;
+    min-width: 120px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e2e8f0;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+/* 文档上传：三列并排 */
+.sol-create-modal .sol-upload-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.sol-create-modal .sol-upload-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+.sol-create-modal .sol-upload-block .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+/* 上传区域：优化点击/拖拽视觉反馈 */
+.sol-create-modal .upload-area {
+    padding: 22px 14px;
+    border: 1.5px dashed rgba(99, 102, 241, 0.35);
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.04);
+    transition: all 0.2s ease;
+}
+.sol-create-modal .upload-area:hover {
+    border-color: rgba(129, 140, 248, 0.75);
+    background: rgba(99, 102, 241, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(2, 6, 23, 0.4);
+}
+.sol-create-modal .upload-area .upload-icon {
+    font-size: 30px;
+    margin-bottom: 8px;
+    transition: transform 0.2s ease;
+}
+.sol-create-modal .upload-area:hover .upload-icon {
+    transform: scale(1.12);
+}
+.sol-create-modal .upload-area .upload-title {
+    font-size: 13px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+.sol-create-modal .upload-area .upload-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 6px;
+}
+
+/* 已选文件列表 */
+.sol-create-modal .upload-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+.sol-create-modal .upload-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #cbd5e1;
+    animation: solFileIn 0.25s ease both;
+}
+.sol-create-modal .upload-item .file-icon {
+    flex-shrink: 0;
+}
+.sol-create-modal .upload-item .upload-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sol-create-modal .upload-item .upload-size {
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 11px;
+}
+.sol-create-modal .upload-item .upload-remove {
+    flex-shrink: 0;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 15px;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+.sol-create-modal .upload-item .upload-remove:hover {
+    color: #fca5a5;
+}
+@keyframes solFileIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* 提交按钮禁用态更明确 */
+.sol-create-modal .modal-footer .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .sol-create-modal .sol-upload-grid {
+        grid-template-columns: 1fr;
+    }
+    .sol-create-modal .sol-section-hint {
+        display: none;
+    }
+}
+
+/* ============================================================
+   方案详情弹窗 —— 概览横幅 / 分区增强（对齐新增方案风格）
+   ============================================================ */
+.modal-content.sol-detail-modal {
+    max-width: 820px;
+}
+.sol-detail-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 24px;
+}
+/* 防止 flex 列布局下子项被压缩导致内容（如标题）被裁切 */
+.sol-detail-modal .modal-body > * {
+    flex-shrink: 0;
+}
+
+/* 概览横幅：渐变底 + 大图标 + 名称 + 标签 */
+.sol-detail-modal .sol-detail-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 22px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.22), rgba(56, 189, 248, 0.08));
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+.sol-detail-modal .sol-detail-hero::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #818cf8, #4f46e5);
+}
+.sol-detail-modal .sol-detail-hero::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    top: -40px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(129, 140, 248, 0.25), transparent 70%);
+    pointer-events: none;
+}
+.sol-detail-modal .sol-hero-icon {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(56, 189, 248, 0.18));
+    border: 1px solid rgba(129, 140, 248, 0.4);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+}
+.sol-detail-modal .sol-hero-main {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+}
+.sol-detail-modal .sol-hero-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: 0.3px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+.sol-detail-modal .sol-hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.sol-detail-modal .sol-hero-tags .tag-sm {
+    font-size: 11.5px;
+    padding: 4px 11px;
+    border-radius: 999px;
+}
+.sol-detail-modal .sol-hero-ver {
+    background: rgba(15, 23, 42, 0.6);
+    color: #cbd5e1;
+    font-family: Consolas, 'Courier New', monospace;
+    border: 1px solid rgba(71, 85, 105, 0.5);
+}
+.sol-detail-modal .sol-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+.sol-detail-modal .sol-hero-meta code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 11.5px;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.55);
+    padding: 1px 7px;
+    border-radius: 5px;
+    border: 1px solid rgba(71, 85, 105, 0.4);
+}
+.sol-detail-modal .sol-hero-meta-sep {
+    color: #475569;
+}
+
+/* 分区卡片 hover 微反馈 */
+.sol-detail-modal .sol-section {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.sol-detail-modal .sol-section:hover {
+    border-color: rgba(99, 102, 241, 0.32);
+    box-shadow: 0 6px 22px rgba(2, 6, 23, 0.32);
+}
+
+/* 基本信息字段块：底纹增强可读性 */
+.sol-detail-modal .detail-grid .detail-item {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(71, 85, 105, 0.25);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+.sol-detail-modal .detail-grid.stats-grid .detail-item {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+/* 文档统计卡片：图标 + 数字强调 + 三色 + hover 反馈 */
+.sol-detail-modal .detail-stat {
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+}
+.sol-detail-modal .detail-stat:hover {
+    transform: translateY(-3px);
+    border-color: rgba(129, 140, 248, 0.5);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.45);
+}
+.sol-detail-modal .detail-stat .stat-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+.sol-detail-modal .detail-grid.stats-grid .detail-stat:nth-child(1) .stat-value { color: #38bdf8; }
+.sol-detail-modal .detail-grid.stats-grid .detail-stat:nth-child(2) .stat-value { color: #34d399; }
+.sol-detail-modal .detail-grid.stats-grid .detail-stat:nth-child(3) .stat-value { color: #a78bfa; }
+
+/* 分区入场动画（错峰） */
+.sol-detail-modal .sol-detail-hero,
+.sol-detail-modal .sol-section {
+    animation: solSecIn 0.4s ease both;
+}
+.sol-detail-modal .sol-section:nth-of-type(2) { animation-delay: 0.05s; }
+.sol-detail-modal .sol-section:nth-of-type(3) { animation-delay: 0.1s; }
+.sol-detail-modal .sol-section:nth-of-type(4) { animation-delay: 0.15s; }
+.sol-detail-modal .sol-section:nth-of-type(5) { animation-delay: 0.2s; }
+@keyframes solSecIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+    .sol-detail-modal .sol-detail-hero {
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+    }
+    .sol-detail-modal .sol-hero-tags,
+    .sol-detail-modal .sol-hero-meta {
+        justify-content: center;
+    }
+}
+
+/* 关键要素：标签组 + 长文本 */
+.sol-detail-modal .detail-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sol-detail-modal .detail-chips .tag-sm {
+    font-size: 12px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(79, 70, 229, 0.15));
+    border: 1px solid rgba(129, 140, 248, 0.28);
+    color: #c7d2fe;
+}
+.sol-detail-modal .detail-value.pre-wrap {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.7;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+/* 文档列表：可点击下载 */
+.sol-detail-modal .sol-doc-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.sol-detail-modal .sol-doc-group-title {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+.sol-detail-modal .sol-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    margin-bottom: 6px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.sol-detail-modal .sol-doc-item:hover {
+    border-color: rgba(129, 140, 248, 0.55);
+    background: rgba(49, 46, 129, 0.3);
+    transform: translateX(2px);
+}
+.sol-detail-modal .sol-doc-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+}
+.sol-detail-modal .sol-doc-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sol-detail-modal .sol-doc-dl {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #818cf8;
+    padding: 3px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(129, 140, 248, 0.4);
+    background: rgba(99, 102, 241, 0.12);
+    transition: all 0.18s ease;
+}
+.sol-detail-modal .sol-doc-item:hover .sol-doc-dl {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    border-color: #818cf8;
+}
