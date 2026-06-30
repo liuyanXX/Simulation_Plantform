@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方案管理测试</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="../js/simulation_plant_common.js"></script>
+    <style>
+        .list-container { margin: 20px; }
+        .list-item { border: 1px solid #ccc; padding: 10px; margin: 5px; }
+        .empty-state { color: #999; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="list-container">
+            <div v-for="doc in pagedSolutionDocuments" :key="doc.id" class="list-item">
+                {{ doc.solution_name }}
+            </div>
+            <div v-if="solutionList.length === 0" class="empty-state">暂无数据</div>
+            <div>总数: {{ solutionList.length }}</div>
+        </div>
+        <button @click="loadSolutionList">刷新</button>
+    </div>
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        const C = window.SP_Common || {};
+        const { apiFetch: _apiFetch } = C;
+        const apiFetch = typeof _apiFetch === 'function' ? _apiFetch : async (url, opts = {}) => {
+            const res = await fetch(url, opts);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        };
+        createApp({
+            setup() {
+                const solutionList = ref([]);
+                const solutionPage = ref(1);
+                const solutionPageSize = ref(10);
+                const loadSolutionList = async () => {
+                    const data = await apiFetch('/api/smeta/solution/list?page=' + solutionPage.value + '&page_size=' + solutionPageSize.value);
+                    if (data.success) {
+                        solutionList.value = data.data.list || [];
+                    }
+                };
+                const pagedSolutionDocuments = computed(() => {
+                    const ps = solutionPageSize.value;
+                    const p = solutionPage.value;
+                    return (solutionList.value || []).slice((p - 1) * ps, p * ps);
+                });
+                onMounted(() => { loadSolutionList(); });
+                return { solutionList, pagedSolutionDocuments, loadSolutionList };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

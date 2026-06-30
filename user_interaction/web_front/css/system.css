@@ -341,6 +341,10 @@
     animation: slideUp 0.3s ease;
 }
 
+.modal-container.solution-modal {
+    max-width: 1000px;
+}
+
 @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -471,6 +475,10 @@
 
 .sys-form-grid .form-group.full-width {
     grid-column: 1 / -1;
+}
+
+.sys-form-grid .form-group.col-span-2 {
+    grid-column: span 2;
 }
 
 .load-status {

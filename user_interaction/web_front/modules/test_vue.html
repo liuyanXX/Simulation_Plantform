@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue测试</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="../js/simulation_plant_common.js"></script>
+<script src="../js/solution.js?v=2026063002"></script>
+</head>
+<body>
+    <div id="app">
+        <div v-for="item in items" :key="item.id">{{ item.solution_name }}</div>
+        <div v-if="items.length === 0">暂无数据</div>
+        <button @click="load">刷新</button>
+        <div>debug: {{ items.length }}</div>
+    </div>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                const items = ref([]);
+                const load = async () => {
+                    const res = await fetch('/api/smeta/solution/list?page=1&page_size=10');
+                    const data = await res.json();
+                    items.value = data.data.list;
+                    console.log('loaded items:', items.value.length);
+                };
+                onMounted(load);
+                return { items, load };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,31 +1,21 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
-
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仿真平台 - 方案管理</title>
     <link rel="stylesheet" href="../css/app.css">
-
+    <link rel="stylesheet" href="../css/system.css?v=2026063001">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
-
 <body>
-
     <div id="app">
-
         <div class="bg-animation"></div>
-
         <main class="main-container">
-
-            <!-- 方案管理 -->
             <section key="solution">
-
                 <h1 class="page-title">方案管理</h1>
                 <p class="page-desc">管理方案文档对象，支持查看、上传和删除</p>
-
-                <!-- 操作栏 -->
+                
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">
@@ -33,15 +23,11 @@
                             方案文档列表
                         </div>
                         <div class="card-actions">
-                            <button class="btn btn-primary" @click="showUploadModal = true">
-                                <span>📤</span> 方案上传
-                            </button>
-                            <button class="btn btn-danger" @click="batchDeleteSolutions" :disabled="selectedSolutionIds.length === 0">
-                                <span>🗑️</span> 批量删除 ({{ selectedSolutionIds.length }})
-                            </button>
+                            <button class="btn btn-primary" @click="showUploadModal = true"><span>📤</span> 方案上传</button>
+                            <button class="btn btn-danger" :disabled="selectedSolutionIds.length === 0" @click="batchDeleteSolutions"><span>🗑️</span> 批量删除 ({{ selectedSolutionIds.length }})</button>
                             <div class="pagination-size">
                                 <label>每页:</label>
-                                <select v-model="solutionPageSize" @change="solutionCurrentPage = 1">
+                                <select v-model="solutionPageSize" @change="solutionPage = 1">
                                     <option :value="5">5</option>
                                     <option :value="10">10</option>
                                     <option :value="20">20</option>
@@ -51,112 +37,218 @@
                     </div>
 
                     <div class="list-container">
-                        <div
-                            v-for="doc in pagedSolutionDocuments"
-                            :key="doc.document_id"
-                            class="list-item"
-                            :class="{ selected: selectedSolutionIds.includes(doc.document_id) }"
-                        >
-                            <div class="list-item-main" @click="toggleSolutionSelection(doc.document_id)">
-                                <div class="checkbox" :class="{ checked: selectedSolutionIds.includes(doc.document_id) }">
-                                    <span v-if="selectedSolutionIds.includes(doc.document_id)">✓</span>
+                        <div v-for="doc in pagedSolutionDocuments" :key="doc.id" class="list-item" :class="{ selected: selectedSolutionIds.includes(doc.id) }">
+                            <div class="list-item-main" @click="toggleSolutionSelection(doc.id)">
+                                <div class="checkbox" :class="{ checked: selectedSolutionIds.includes(doc.id) }">
+                                    <span v-if="selectedSolutionIds.includes(doc.id)">✓</span>
                                 </div>
-                                <div class="item-icon">📄</div>
+                                <div class="item-icon">📋</div>
                                 <div class="item-content">
-                                    <div class="item-title">{{ doc.document_name }}</div>
+                                    <div class="item-title">{{ doc.solution_name }}</div>
                                     <div class="item-sub">
-                                        <span class="tag tag-sm">{{ doc.document_type }}</span>
-                                        <span v-if="doc.file_count !== undefined" class="tag tag-sm" style="background:rgba(6,182,212,0.15);color:#22d3ee;">📎 文件数 {{ doc.file_count || 0 }}</span>
-                                        <span v-if="doc.status" class="tag tag-sm" :class="'tag-' + (doc.status==='completed'?'success':doc.status==='processing'?'warning':'info')">
-                                            {{ doc.status === 'completed' ? '已理解' : doc.status === 'processing' ? '理解中' : '待理解' }}
+                                        <span class="tag tag-sm">{{ doc.category || '未分类' }}</span>
+                                        <span class="tag tag-sm" style="background:rgba(6,182,212,0.15);color:#22d3ee;">📄 主文档 {{ doc.main_docs_count || 0 }}</span>
+                                        <span class="tag tag-sm" style="background:rgba(34,197,94,0.15);color:#22c55e;">📎 附件 {{ doc.attachments_count || 0 }}</span>
+                                        <span class="tag tag-sm" style="background:rgba(168,85,247,0.15);color:#a855f7;">📚 参考 {{ doc.references_count || 0 }}</span>
+                                        <span v-if="doc.status" class="tag tag-sm" :class="'tag-' + (doc.status==='已批准'?'success':doc.status==='评审中'?'warning':'info')">
+                                            {{ doc.status }}
                                         </span>
-                                        <span class="meta-sm">版本 {{ doc.version || 1 }} · 创建 {{ formatDateTime(doc.created_at) }}</span>
+                                        <span class="meta-sm">版本 {{ doc.version_label || 'v1.0' }} · 创建 {{ formatDateTime(doc.created_at) }}</span>
                                     </div>
-                                    <div class="item-tags" v-if="doc.tags && doc.tags.length">
-                                        <span v-for="(t, i) in doc.tags" :key="i" class="tag tag-sm">{{ t }}</span>
-                                    </div>
-                                    <div class="item-meta" v-if="doc.description">{{ doc.description }}</div>
+                                    <div class="item-meta" v-if="doc.summary">{{ doc.summary }}</div>
                                 </div>
                             </div>
                             <div class="item-actions">
-                                <button class="btn btn-sm" @click.stop="viewDocumentDetail(doc.document_id)">详情</button>
-                                <button class="btn btn-sm" @click.stop="deleteSolutionDocument(doc.document_id)">删除</button>
+                                <button class="btn btn-sm" @click.stop="viewSolutionDetail(doc)">详情</button>
+                                <button class="btn btn-sm btn-danger-sm" @click.stop="deleteSolution(doc.id)">删除</button>
                             </div>
                         </div>
-
-                        <div v-if="solutionDocuments.length === 0" class="empty-state">
+                        <div v-if="solutionList.length === 0" class="empty-state">
                             <div style="font-size: 48px;">📭</div>
-                            <p>暂无方案文档，点击"方案上传"开始吧</p>
+                            <p>暂无方案，点击"方案上传"开始吧</p>
                         </div>
                     </div>
 
-                    <div class="pagination" v-if="solutionDocuments.length > 0">
-                        <button class="page-btn" :disabled="solutionCurrentPage === 1" @click="solutionCurrentPage--">上一页</button>
-                        <span class="page-info">{{ solutionCurrentPage }} / {{ solutionTotalPages }}</span>
-                        <button class="page-btn" :disabled="solutionCurrentPage === solutionTotalPages" @click="solutionCurrentPage++">下一页</button>
+                    <div class="pagination" v-if="solutionList.length > 0">
+                        <button class="page-btn" :disabled="solutionPage === 1" @click="prevSolutionPage">上一页</button>
+                        <span class="page-info">{{ solutionPage }} / {{ solutionTotalPages }}</span>
+                        <button class="page-btn" :disabled="solutionPage === solutionTotalPages" @click="nextSolutionPage">下一页</button>
                     </div>
                 </div>
             </section>
 
             <!-- 上传弹窗 -->
             <div v-if="showUploadModal" class="modal-overlay" @click.self="showUploadModal = false">
-                <div class="modal-content">
+                <div class="modal-container solution-modal">
                     <div class="modal-header">
-                        <h3>方案文档上传</h3>
+                        <h3>新增方案</h3>
                         <button class="modal-close" @click="showUploadModal = false">×</button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <div class="form-label">文档名称 *</div>
-                                <input class="form-input" v-model="uploadForm.name" placeholder="例如：某任务整体方案">
+                        <div class="sys-form-grid">
+                            <div class="form-group required col-span-2"><div class="form-label">方案名称</div>
+                                <input class="form-input" v-model="solutionForm.base.solution_name" placeholder="请输入方案名称">
                             </div>
-                            <div class="form-group">
-                                <div class="form-label">文档类型 *</div>
-                                <select class="form-input" v-model="uploadForm.type">
-                                    <option value="structured">结构化方案</option>
-                                    <option value="unstructured">非结构化文档</option>
+                            <div class="form-group"><div class="form-label">方案类别</div>
+                                <input class="form-input" v-model="solutionForm.base.category" placeholder="如：项目管理、风险管理">
+                            </div>
+
+                            <div class="form-group"><div class="form-label">主版本号</div>
+                                <input class="form-input" v-model.number="solutionForm.base.major_version" type="number" min="0" placeholder="1">
+                            </div>
+                            <div class="form-group"><div class="form-label">次版本号</div>
+                                <input class="form-input" v-model.number="solutionForm.base.minor_version" type="number" min="0" placeholder="0">
+                            </div>
+                            <div class="form-group"><div class="form-label">方案状态</div>
+                                <select class="form-input" v-model="solutionForm.base.status">
+                                    <option value="草稿">草稿</option>
+                                    <option value="评审中">评审中</option>
+                                    <option value="已批准">已批准</option>
+                                    <option value="已驳回">已驳回</option>
+                                    <option value="已归档">已归档</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <div class="form-label">版本号</div>
-                                <input class="form-input" v-model="uploadForm.version" placeholder="默认 1">
+
+                            <div class="form-group full-width"><div class="form-label">方案摘要</div>
+                                <textarea class="form-input" v-model="solutionForm.base.summary" rows="3" placeholder="简要描述方案内容"></textarea>
                             </div>
-                            <div class="form-group">
-                                <div class="form-label">文档来源</div>
-                                <input class="form-input" v-model="uploadForm.source" placeholder="例如：某部门">
-                            </div>
-                            <div class="form-group full-width">
-                                <div class="form-label">标签</div>
+
+                            <div class="form-group full-width"><div class="form-label">方案目的</div>
                                 <div class="tag-input-container">
-                                    <span class="tag" v-for="(tag, i) in uploadForm.tags" :key="i">
-                                        {{ tag }}
-                                        <span class="tag-remove" @click="uploadForm.tags.splice(i, 1)">×</span>
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.purposes" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.purposes.splice(i, 1)">×</span>
                                     </span>
-                                    <input class="tag-input" v-model="newUploadTag" @keydown.enter.prevent="uploadForm.tags.push(newUploadTag); newUploadTag = ''" placeholder="输入标签后按回车">
+                                    <input class="tag-input" v-model="newPurposeTag" @keydown.enter.prevent="solutionForm.key.purposes.push(newPurposeTag); newPurposeTag = ''" placeholder="输入后按回车">
                                 </div>
                             </div>
-                            <div class="form-group full-width">
-                                <div class="form-label">备注说明</div>
-                                <textarea class="form-input" v-model="uploadForm.description" rows="2" placeholder="选填"></textarea>
-                            </div>
-                            <div class="form-group full-width">
-                                <div class="form-label">上传文件 *</div>
-                                <input id="file-input-document" type="file"
-                                       style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);"
-                                       @change="handleDocumentSelect" multiple />
-                                <div class="upload-area" tabindex="0" role="button" aria-label="点击选择文件"
-                                     @click="openFilePicker('file-input-document')"
-                                     @dragover.prevent @drop.prevent="handleDocumentDrop">
-                                    <div style="font-size:48px;margin-bottom:16px;">📤</div>
-                                    <p>点击或拖拽文件到此处上传</p>
-                                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">支持多种格式文件</p>
+
+                            <div class="form-group full-width"><div class="form-label">方案目标</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.objectives" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.objectives.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newObjectiveTag" @keydown.enter.prevent="solutionForm.key.objectives.push(newObjectiveTag); newObjectiveTag = ''" placeholder="输入后按回车">
                                 </div>
-                                <div v-if="uploadForm.files.length > 0" class="upload-list">
-                                    <div v-for="(f, i) in uploadForm.files" :key="i" class="upload-item">
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">方案举措</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.measures" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.measures.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newMeasureTag" @keydown.enter.prevent="solutionForm.key.measures.push(newMeasureTag); newMeasureTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">涉及组织</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.organizations" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.organizations.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newOrgTag" @keydown.enter.prevent="solutionForm.key.organizations.push(newOrgTag); newOrgTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">涉及人员</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.personnel" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.personnel.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newPersonnelTag" @keydown.enter.prevent="solutionForm.key.personnel.push(newPersonnelTag); newPersonnelTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">工作机制</div>
+                                <textarea class="form-input" v-model="solutionForm.key.work_mechanism" rows="3" placeholder="描述工作机制"></textarea>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">工作内容</div>
+                                <textarea class="form-input" v-model="solutionForm.key.work_content" rows="4" placeholder="详细描述工作内容"></textarea>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">限制条件</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.constraints" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.constraints.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newConstraintTag" @keydown.enter.prevent="solutionForm.key.constraints.push(newConstraintTag); newConstraintTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">风险清单</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.risk_list" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.risk_list.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newRiskTag" @keydown.enter.prevent="solutionForm.key.risk_list.push(newRiskTag); newRiskTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">问题清单</div>
+                                <div class="tag-input-container">
+                                    <span class="tag" v-for="(item, i) in solutionForm.key.issue_list" :key="i">
+                                        {{ item }}
+                                        <span class="tag-remove" @click="solutionForm.key.issue_list.splice(i, 1)">×</span>
+                                    </span>
+                                    <input class="tag-input" v-model="newIssueTag" @keydown.enter.prevent="solutionForm.key.issue_list.push(newIssueTag); newIssueTag = ''" placeholder="输入后按回车">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">其它说明</div>
+                                <textarea class="form-input" v-model="solutionForm.key.notes" rows="3" placeholder="其他需要说明的内容"></textarea>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">上传方案主文档</div>
+                                <input id="file-input-main" type="file" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);" @change="handleFileSelect($event, 'main_docs')" multiple />
+                                <div class="upload-area" tabindex="0" role="button" aria-label="点击选择主文档文件" @click="document.getElementById('file-input-main').click()" @dragover.prevent @drop.prevent="handleFileDrop($event, 'main_docs')">
+                                    <div style="font-size:36px;margin-bottom:12px;">📄</div>
+                                    <p>点击或拖拽文件到此处上传主文档</p>
+                                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">支持多种格式文件，可上传多个</p>
+                                </div>
+                                <div v-if="solutionForm.doc.main_docs.length > 0" class="upload-list">
+                                    <div v-for="(f, i) in solutionForm.doc.main_docs" :key="'main-'+i" class="upload-item">
                                         <span class="file-icon">📄</span>
                                         <span>{{ f.name }} ({{ formatFileSize(f.size) }})</span>
-                                        <span class="upload-remove" @click="uploadForm.files.splice(i, 1)">×</span>
+                                        <span class="upload-remove" @click="solutionForm.doc.main_docs.splice(i, 1)">×</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">上传附件文档</div>
+                                <input id="file-input-attachments" type="file" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);" @change="handleFileSelect($event, 'attachments')" multiple />
+                                <div class="upload-area" tabindex="0" role="button" aria-label="点击选择附件文档文件" @click="document.getElementById('file-input-attachments').click()" @dragover.prevent @drop.prevent="handleFileDrop($event, 'attachments')">
+                                    <div style="font-size:36px;margin-bottom:12px;">📎</div>
+                                    <p>点击或拖拽文件到此处上传附件文档</p>
+                                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">支持多种格式文件，可上传多个</p>
+                                </div>
+                                <div v-if="solutionForm.doc.attachments.length > 0" class="upload-list">
+                                    <div v-for="(f, i) in solutionForm.doc.attachments" :key="'att-'+i" class="upload-item">
+                                        <span class="file-icon">📎</span>
+                                        <span>{{ f.name }} ({{ formatFileSize(f.size) }})</span>
+                                        <span class="upload-remove" @click="solutionForm.doc.attachments.splice(i, 1)">×</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width"><div class="form-label">上传参考文档</div>
+                                <input id="file-input-references" type="file" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);" @change="handleFileSelect($event, 'references')" multiple />
+                                <div class="upload-area" tabindex="0" role="button" aria-label="点击选择参考文档文件" @click="document.getElementById('file-input-references').click()" @dragover.prevent @drop.prevent="handleFileDrop($event, 'references')">
+                                    <div style="font-size:36px;margin-bottom:12px;">📚</div>
+                                    <p>点击或拖拽文件到此处上传参考文档</p>
+                                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">支持多种格式文件，可上传多个</p>
+                                </div>
+                                <div v-if="solutionForm.doc.references.length > 0" class="upload-list">
+                                    <div v-for="(f, i) in solutionForm.doc.references" :key="'ref-'+i" class="upload-item">
+                                        <span class="file-icon">📚</span>
+                                        <span>{{ f.name }} ({{ formatFileSize(f.size) }})</span>
+                                        <span class="upload-remove" @click="solutionForm.doc.references.splice(i, 1)">×</span>
                                     </div>
                                 </div>
                             </div>
@@ -164,90 +256,214 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" @click="showUploadModal = false">取消</button>
-                        <button class="btn btn-primary" @click="uploadDocument" :disabled="!canUploadDocument || uploadInProgress">
-                            <span v-if="uploadInProgress">上传中...</span>
-                            <span v-else>📤 上传</span>
-                        </button>
+                        <button class="btn btn-primary" @click="submitSolution" :disabled="!solutionForm.base.solution_name.trim()">提交方案</button>
                     </div>
                 </div>
             </div>
 
-            <!-- 文档详情弹窗 -->
-            <div v-if="showDocumentDetail" class="modal-overlay" @click.self="showDocumentDetail = false">
+            <!-- 详情弹窗 -->
+            <div v-if="showSolutionDetailModal" class="modal-overlay" @click.self="showSolutionDetailModal = false">
                 <div class="modal-content" style="max-width:800px;">
                     <div class="modal-header">
-                        <h3>方案文档详情</h3>
-                        <button class="modal-close" @click="showDocumentDetail = false">×</button>
+                        <h3>方案详情</h3>
+                        <button class="modal-close" @click="showSolutionDetailModal = false">×</button>
                     </div>
-                    <div class="modal-body" v-if="currentDocument">
+                    <div class="modal-body" v-if="solutionDetail">
                         <div class="detail-section">
-                            <div class="detail-row"><div class="detail-label">文档编号</div><div class="detail-value">{{ currentDocument.document_id }}</div></div>
-                            <div class="detail-row"><div class="detail-label">文档名称</div><div class="detail-value">{{ currentDocument.document_name }}</div></div>
-                            <div class="detail-row"><div class="detail-label">文档类型</div><div class="detail-value">
-                                <span class="tag tag-sm">{{ currentDocument.document_type }}</span>
-                                <span v-if="currentDocument.status" class="tag tag-sm" :class="'tag-' + (currentDocument.status==='completed'?'success':currentDocument.status==='processing'?'warning':'info')">
-                                    {{ currentDocument.status === 'completed' ? '已理解' : currentDocument.status === 'processing' ? '理解中' : '待理解' }}
-                                </span>
+                            <div class="detail-row"><div class="detail-label">方案编号</div><div class="detail-value">{{ solutionDetail.id }}</div></div>
+                            <div class="detail-row"><div class="detail-label">方案名称</div><div class="detail-value">{{ solutionDetail.solution_name }}</div></div>
+                            <div class="detail-row"><div class="detail-label">方案类别</div><div class="detail-value">
+                                <span class="tag tag-sm">{{ solutionDetail.category || '未分类' }}</span>
+                                <span v-if="solutionDetail.status" class="tag tag-sm" :class="'tag-' + (solutionDetail.status==='已批准'?'success':solutionDetail.status==='评审中'?'warning':'info')">{{ solutionDetail.status }}</span>
                             </div></div>
-                            <div class="detail-row"><div class="detail-label">版本</div><div class="detail-value">{{ currentDocument.version || 1 }}</div></div>
-                            <div class="detail-row"><div class="detail-label">文件数</div><div class="detail-value">{{ currentDocument.file_count || 0 }}</div></div>
-                            <div class="detail-row"><div class="detail-label">来源</div><div class="detail-value">{{ currentDocument.source || '-' }}</div></div>
-                            <div class="detail-row" v-if="currentDocument.tags && currentDocument.tags.length"><div class="detail-label">标签</div><div class="detail-value">
-                                <span v-for="(t,i) in currentDocument.tags" :key="i" class="tag tag-sm">{{ t }}</span>
-                            </div></div>
-                            <div class="detail-row"><div class="detail-label">创建时间</div><div class="detail-value">{{ formatDateTime(currentDocument.created_at) }}</div></div>
-                            <div class="detail-row"><div class="detail-label">修改时间</div><div class="detail-value">{{ formatDateTime(currentDocument.updated_at) }}</div></div>
-                            <div class="detail-row" v-if="currentDocument.description"><div class="detail-label">备注</div><div class="detail-value">{{ currentDocument.description }}</div></div>
-                        </div>
-
-                        <div v-if="currentDocument.files && currentDocument.files.length > 0" class="detail-section">
-                            <div class="detail-label" style="font-size:16px;margin-bottom:12px;">📎 文件清单 ({{ currentDocument.files.length }})</div>
-                            <div class="list-container">
-                                <div v-for="f in currentDocument.files" :key="f.file_id" class="list-item">
-                                    <div class="item-content">
-                                        <div class="item-title">{{ f.file_name }}</div>
-                                        <div class="item-sub">
-                                            <span class="tag tag-sm">{{ f.file_type || '-' }}</span>
-                                            <span class="tag tag-sm">{{ formatFileSize(f.file_size || 0) }}</span>
-                                            <span class="meta-sm">{{ formatDateTime(f.uploaded_at) }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="item-actions">
-                                        <button class="btn btn-sm" @click="downloadSingleFile(f.file_id, f.file_name)">下载</button>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="detail-row"><div class="detail-label">版本</div><div class="detail-value">{{ solutionDetail.version_label || 'v1.0' }}</div></div>
+                            <div class="detail-row"><div class="detail-label">主文档数</div><div class="detail-value">{{ solutionDetail.main_docs_count || 0 }}</div></div>
+                            <div class="detail-row"><div class="detail-label">附件数</div><div class="detail-value">{{ solutionDetail.attachments_count || 0 }}</div></div>
+                            <div class="detail-row"><div class="detail-label">参考文档数</div><div class="detail-value">{{ solutionDetail.references_count || 0 }}</div></div>
+                            <div class="detail-row" v-if="solutionDetail.summary"><div class="detail-label">方案摘要</div><div class="detail-value">{{ solutionDetail.summary }}</div></div>
+                            <div class="detail-row"><div class="detail-label">创建时间</div><div class="detail-value">{{ formatDateTime(solutionDetail.created_at) }}</div></div>
+                            <div class="detail-row"><div class="detail-label">修改时间</div><div class="detail-value">{{ formatDateTime(solutionDetail.updated_at) }}</div></div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- 消息提示 -->
-            <div class="toast-container">
-                <div
-                    v-for="toast in toasts"
-                    :key="toast.id"
-                    class="toast"
-                    :class="'toast-' + toast.type"
-                >
-                    <div class="toast-icon">
-                        {{ toast.type === 'success' ? '✓' : toast.type === 'warning' ? '!' : toast.type === 'error' ? '✕' : 'ℹ' }}
-                    </div>
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 2px;">{{ toast.title }}</div>
-                        <div style="font-size: 13px; color: var(--text-secondary);">{{ toast.message }}</div>
-                    </div>
-                </div>
-            </div>
-
         </main>
-
     </div>
 
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<script src="../js/simulation_plant_common.js"></script>
-<script src="../js/solution.js"></script>
+    <script>
+        const { createApp, ref, computed, reactive, onMounted } = Vue;
+        
+        const API_BASE = '/api/smeta/solution';
+        
+        const formatDateTime = (dateStr) => {
+            if (!dateStr) return '';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch {
+                return dateStr;
+            }
+        };
 
+        const formatFileSize = (bytes) => {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+
+        const showToast = (title, message, type = 'info') => {
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            toast.innerHTML = '<div>' + title + '</div><div style="font-size:13px;">' + message + '</div>';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        };
+
+        const apiFetch = async (url, opts = {}) => {
+            const res = await fetch(url, opts);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        };
+
+        createApp({
+            setup() {
+                const solutionList = ref([]);
+                const solutionTotal = ref(0);
+                const solutionPage = ref(1);
+                const solutionPageSize = ref(10);
+                const selectedSolutionIds = ref([]);
+                const showUploadModal = ref(false);
+                const showSolutionDetailModal = ref(false);
+                const solutionDetail = reactive({});
+
+                const solutionForm = reactive({
+                    base: { id: '', solution_name: '', major_version: 1, minor_version: 0, status: '草稿', category: '', summary: '' },
+                    key: { purposes: [], objectives: [], measures: [], organizations: [], personnel: [], work_mechanism: '', work_content: '', constraints: [], risk_list: [], issue_list: [], notes: '' },
+                    doc: { main_docs: [], attachments: [], references: [] }
+                });
+
+                const newPurposeTag = ref('');
+                const newObjectiveTag = ref('');
+                const newMeasureTag = ref('');
+                const newOrgTag = ref('');
+                const newPersonnelTag = ref('');
+                const newConstraintTag = ref('');
+                const newRiskTag = ref('');
+                const newIssueTag = ref('');
+
+                const loadSolutionList = async () => {
+                    const data = await apiFetch(`${API_BASE}/list?page=${solutionPage.value}&page_size=${solutionPageSize.value}`);
+                    if (data.success) {
+                        solutionList.value = data.data.list || [];
+                        solutionTotal.value = data.data.total;
+                    }
+                };
+
+                const pagedSolutionDocuments = computed(() => {
+                    const ps = solutionPageSize.value;
+                    const p = solutionPage.value;
+                    return (solutionList.value || []).slice((p - 1) * ps, p * ps);
+                });
+
+                const solutionTotalPages = computed(() => {
+                    return Math.max(1, Math.ceil((solutionTotal.value || 0) / Math.max(1, solutionPageSize.value)));
+                });
+
+                const prevSolutionPage = () => { if (solutionPage.value > 1) { solutionPage.value--; loadSolutionList(); } };
+                const nextSolutionPage = () => { if (solutionPage.value < solutionTotalPages.value) { solutionPage.value++; loadSolutionList(); } };
+
+                const toggleSolutionSelection = (id) => {
+                    const index = selectedSolutionIds.value.indexOf(id);
+                    if (index > -1) { selectedSolutionIds.value.splice(index, 1); } else { selectedSolutionIds.value.push(id); }
+                };
+
+                const deleteSolution = async (id) => {
+                    if (!confirm('确定要删除这个方案吗？')) return;
+                    const data = await apiFetch(`${API_BASE}/delete/${id}`, { method: 'DELETE' });
+                    if (data.success) { showToast('删除成功', '方案已删除'); loadSolutionList(); }
+                };
+
+                const batchDeleteSolutions = async () => {
+                    if (!confirm(`确定要删除选中的 ${selectedSolutionIds.value.length} 个方案吗？`)) return;
+                    const data = await apiFetch(`${API_BASE}/batch_delete`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: selectedSolutionIds.value })
+                    });
+                    if (data.success) { showToast('删除成功', `${selectedSolutionIds.value.length} 个方案已删除`); selectedSolutionIds.value = []; loadSolutionList(); }
+                };
+
+                const viewSolutionDetail = async (doc) => {
+                    const data = await apiFetch(`${API_BASE}/detail/${doc.id}`);
+                    if (data.success) { Object.assign(solutionDetail, data.data); showSolutionDetailModal.value = true; }
+                };
+
+                const handleFileSelect = (e, type) => {
+                    const files = Array.from(e.target.files);
+                    if (type === 'main_docs') solutionForm.doc.main_docs.push(...files);
+                    else if (type === 'attachments') solutionForm.doc.attachments.push(...files);
+                    else if (type === 'references') solutionForm.doc.references.push(...files);
+                };
+
+                const handleFileDrop = (e, type) => {
+                    e.preventDefault();
+                    const files = Array.from(e.dataTransfer.files);
+                    if (type === 'main_docs') solutionForm.doc.main_docs.push(...files);
+                    else if (type === 'attachments') solutionForm.doc.attachments.push(...files);
+                    else if (type === 'references') solutionForm.doc.references.push(...files);
+                };
+
+                const submitSolution = async () => {
+                    if (!solutionForm.base.solution_name.trim()) return;
+                    const formData = new FormData();
+                    formData.append('solution_name', solutionForm.base.solution_name);
+                    formData.append('major_version', solutionForm.base.major_version);
+                    formData.append('minor_version', solutionForm.base.minor_version);
+                    formData.append('status', solutionForm.base.status);
+                    formData.append('category', solutionForm.base.category);
+                    formData.append('summary', solutionForm.base.summary);
+                    formData.append('purposes', JSON.stringify(solutionForm.key.purposes));
+                    formData.append('objectives', JSON.stringify(solutionForm.key.objectives));
+                    formData.append('measures', JSON.stringify(solutionForm.key.measures));
+                    formData.append('organizations', JSON.stringify(solutionForm.key.organizations));
+                    formData.append('personnel', JSON.stringify(solutionForm.key.personnel));
+                    formData.append('work_mechanism', solutionForm.key.work_mechanism || '');
+                    formData.append('work_content', solutionForm.key.work_content || '');
+                    formData.append('constraints', JSON.stringify(solutionForm.key.constraints));
+                    formData.append('risk_list', JSON.stringify(solutionForm.key.risk_list));
+                    formData.append('issue_list', JSON.stringify(solutionForm.key.issue_list));
+                    formData.append('notes', solutionForm.key.notes || '');
+                    solutionForm.doc.main_docs.forEach((file) => { formData.append('main_docs', file); });
+                    solutionForm.doc.attachments.forEach((file) => { formData.append('attachments', file); });
+                    solutionForm.doc.references.forEach((file) => { formData.append('references', file); });
+
+                    const data = await apiFetch(`${API_BASE}/create`, { method: 'POST', body: formData });
+                    if (data.success) {
+                        showToast('提交成功', `方案 [${solutionForm.base.solution_name}] 已保存`);
+                        showUploadModal.value = false;
+                        solutionForm.base = { id: '', solution_name: '', major_version: 1, minor_version: 0, status: '草稿', category: '', summary: '' };
+                        solutionForm.key = { purposes: [], objectives: [], measures: [], organizations: [], personnel: [], work_mechanism: '', work_content: '', constraints: [], risk_list: [], issue_list: [], notes: '' };
+                        solutionForm.doc = { main_docs: [], attachments: [], references: [] };
+                        loadSolutionList();
+                    }
+                };
+
+                onMounted(() => { loadSolutionList(); });
+
+                return {
+                    solutionList, solutionTotal, solutionPage, solutionPageSize,
+                    selectedSolutionIds, showUploadModal, showSolutionDetailModal, solutionDetail,
+                    solutionForm,
+                    newPurposeTag, newObjectiveTag, newMeasureTag, newOrgTag, newPersonnelTag, newConstraintTag, newRiskTag, newIssueTag,
+                    pagedSolutionDocuments, solutionTotalPages,
+                    loadSolutionList, prevSolutionPage, nextSolutionPage,
+                    toggleSolutionSelection, deleteSolution, batchDeleteSolutions,
+                    viewSolutionDetail, handleFileSelect, handleFileDrop, submitSolution,
+                    formatDateTime, formatFileSize
+                };
+            }
+        }).mount('#app');
+    </script>
 </body>
-
 </html>
