@@ -49,7 +49,6 @@ def run_all_tests():
         'test_task_manifest_service.py',
         'test_task_flow_group_service.py',
         'test_tasks_graph_service.py',
-        'test_evaluation_index_service.py',
         'test_knowledge_service.py',
         'test_integration.py'
     ]

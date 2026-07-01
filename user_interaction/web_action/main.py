@@ -62,6 +62,8 @@ from user_interaction.web_action.routers import (
     knowledge,
     system,
     smeta_solution,
+    km_indicator,
+    srlt_evaluation,
 )
 
 app.include_router(solution.router, prefix="/api/solution", tags=["方案管理"])
@@ -72,6 +74,8 @@ app.include_router(evaluation.router, prefix="/api/evaluation", tags=["评估管
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["知识管理"])
 app.include_router(system.router, prefix="/api/system", tags=["系统管理"])
 app.include_router(smeta_solution.router, prefix="/api/smeta/solution", tags=["方案元空间"])
+app.include_router(km_indicator.router, prefix="/api/km/indicator", tags=["指标管理库"])
+app.include_router(srlt_evaluation.router, prefix="/api/srlt/evaluation", tags=["指标评估管理"])
 
 
 # 前端静态资源

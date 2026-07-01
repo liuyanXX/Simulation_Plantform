@@ -1259,3 +1259,378 @@ POST /api/knowledge/delete
 - user_interaction/web_action/main.py
 - data_storage_services/sql_db_services/smeta/solution_service.py
 - 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-01
+修改内容: 新建知识空间「指标管理库」模块（指标分类分级 + 通用指标元数据 + 配套附件），全栈实现
+================================================================================
+修改原因
+================================================================================
+1. 需求目标：构建一套可复用、可配置、开箱即用的指标数据架构与数据模型，
+   统一管理指标分类分级、指标元数据、配套附件标准。
+2. 归属约定：表名前缀 km_ 归属知识空间；数据对象归属知识空间域（bo/km）；
+   数据管理逻辑放 data_storage_services/sql_db_services/km；
+   业务管理逻辑放 knowledge_management/evaluation_indices；
+   前端复用 user_interaction/web_front，入口设置在「知识管理」页面中。
+3. 不干扰约束：与旧的评价指标实现（evaluation_indices/indices.json +
+   index_manager.py + evaluation_index_service.py）全新并行，互不影响。
+
+================================================================================
+需求澄清（AskUserQuestion 确认结论）
+================================================================================
+1. 前端目录：需求写的 user_interface 与现有框架 user_interaction/web_front 不一致，
+   确认「复用现有 web_front」，遵循 index.html + iframe + FastAPI 静态挂载框架。
+2. 入口方式：确认「知识管理页内新增入口」——在 knowledge.html 侧栏「专业库」区
+   新增「指标管理库」入口卡片，点击切换 iframe 到指标管理库页面。
+3. 与旧指标关系：确认「全新并行实现，不动旧代码」。
+
+================================================================================
+具体修改（分层）
+================================================================================
+1. 业务对象层 bo/km/ （新增）
+   - indicator.py：IndicatorCategory / Indicator / IndicatorAttach 三个 Pydantic 模型，
+     枚举 CommonStatus / IndicatorInfoStatus / IndicatorDataType / AttachType，
+     以及 new_category / new_indicator 工厂方法。
+     scene_tag / tag_list 业务层以 List[str] 承载。
+   - __init__.py：导出上述对象。
+
+2. 数据表 DDL data_storage_services/SQLite/sqlite_db_init.sql （追加）
+   - km_indicator_category（分类分级目录，category_code 唯一，parent_id/level/scene_tag 索引）
+   - km_indicator_info（通用指标主表，indicator_code 唯一，category_id/data_type/tag_list 索引）
+   - km_indicator_attach（配套附件表，indicator_id 索引）
+   - 均使用 CREATE TABLE IF NOT EXISTS，幂等，不影响既有表。
+
+3. 数据管理服务层 data_storage_services/sql_db_services/km/ （新增）
+   - indicator_service.py：KmIndicatorService，基于 SQLiteOperator，
+     实现分类/指标/附件的增删改查、分类树构建（build_category_tree）、
+     指标分页/过滤/关键字检索、编码唯一性校验；
+     scene_tag/tag_list 在 List[str] 与逗号分隔 varchar 间透明转换；
+     删除指标级联清理附件。
+   - __init__.py：导出 KmIndicatorService。
+
+4. 业务管理逻辑层 knowledge_management/evaluation_indices/ （新增）
+   - indicator_library_manager.py：IndicatorLibraryManager，
+     封装分类树/指标/附件的编排与校验（父分类校验 + 层级自动推导、
+     归属分类存在性校验、删除保护友好提示），短连接模式与现有 router 风格一致。
+   - __init__.py：导出 IndicatorLibraryManager / get_indicator_library_manager。
+   - 注：不改动同目录旧 indices.json。
+
+5. API 路由层 user_interaction/web_action/
+   - routers/km_indicator.py（新增）：
+     分类：GET /category/tree、GET /category/list、POST /category/create、
+           POST /category/update、DELETE /category/delete
+     指标：GET /list、GET /detail、POST /create、POST /update、DELETE /delete
+     附件：GET /attach/list、POST /attach/create、DELETE /attach/delete
+     统一响应 {success, message, data}。
+   - main.py：注册 app.include_router(km_indicator.router, prefix="/api/km/indicator")。
+
+6. 前端 user_interaction/web_front/
+   - modules/indicator_library.html（新增）：左侧分类分级目录树 + 右侧指标列表，
+     检索/类型/状态过滤、分页；分类新增/编辑弹窗、指标新增/编辑弹窗、
+     指标详情弹窗（内嵌配套附件管理）。沿用平台深色设计系统，视觉层级与交互统一。
+   - js/indicator_library.js（新增）：Vue3 应用 + 递归 TreeNode 组件 +
+     全量 CRUD 交互 + Toast 提示。
+   - modules/knowledge.html：侧栏新增「专业库 · 指标管理库」入口卡片及样式。
+   - js/knowledge.js：新增 openIndicatorLibrary()（切换 iframe 到指标管理库页面）并导出。
+
+================================================================================
+数据结构对照（需求 → 实现）
+================================================================================
+- km_indicator_category：category_id(PK自增)/parent_id/category_name/category_code(唯一)/
+  level/sort/scene_tag/remark/status/create_time/update_time
+- km_indicator_info：indicator_id(PK自增)/category_id/indicator_name/indicator_code(唯一)/
+  indicator_desc/data_type/unit/standard_value/min_threshold/max_threshold/positive_flag/
+  default_score_rule_id/tag_list/version/status/create_user/create_time/update_time
+- km_indicator_attach：attach_id(PK自增)/indicator_id/file_name/file_url/attach_type/create_time
+
+================================================================================
+端到端验证（全部通过）
+================================================================================
+1. 后端冒烟（业务层直连）：建一级分类、建二级分类(自动 level=2)、分类树、
+   建指标、指标列表、更新指标、附件添加、删除保护(分类下有指标禁止删除)、
+   删除指标级联清理附件、清理。
+2. HTTP 接口（服务运行态，Invoke-RestMethod）：
+   category/create(level 自动推导)、category/tree、create、list、
+   attach/create、detail(含 attaches)、删除保护 del-protect=OK、
+   删除指标后 cascade_attach_left=0、cleanup=OK。
+3. 静态资源：/modules/indicator_library.html 200、/js/indicator_library.js 200(含 mount)、
+   knowledge.js 含 openIndicatorLibrary、knowledge.html 含入口卡片。
+
+================================================================================
+思维路径
+================================================================================
+1. 先读后写：先系统梳理现有分层范式（bo/{ns} + sql_db_services/{ns} +
+   sqlite_db_init.sql/TABLE_DEFINITIONS + routers + web_front/index.html iframe），
+   以 smeta.solution 全链路为样板，确保新模块与既有框架同构、零侵入。
+2. 需求与框架冲突点先澄清：user_interface vs user_interaction、入口方式、
+   与旧评价指标关系，均通过 AskUserQuestion 确认后再动工，避免返工。
+3. 自底向上落地：BO → DDL → 数据服务 → 业务管理 → API → 前端，
+   每层完成后立即用冒烟脚本/HTTP 验证，早发现早修复。
+4. 命名空间隔离：全部 km_ 前缀 + 独立目录，旧评价指标（indices.json）保持原样，
+   实现「全新并行、互不干扰」。
+5. 树形与标签处理：分类树在服务层由平铺行构建嵌套 children；
+   scene_tag/tag_list 采用逗号分隔 varchar 存储、业务层 List[str] 承载，
+   与需求文档的 varchar 逗号分隔口径一致。
+6. 关系完整性：分类删除做「存在子分类/存在指标」双重保护；
+   指标删除级联清理附件，保证数据一致。
+7. 前端对齐设计系统：复用 app.css 深色主题与既有交互模式（弹窗/分页/检索/Toast），
+   保证视觉层级与体验一致；入口内嵌知识管理页侧栏，符合「入口设在知识管理页」。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/km/indicator.py (新增)
+- bo/km/__init__.py (新增)
+- data_storage_services/SQLite/sqlite_db_init.sql (追加 km_ 三表 DDL)
+- data_storage_services/sql_db_services/km/indicator_service.py (新增)
+- data_storage_services/sql_db_services/km/__init__.py (新增)
+- knowledge_management/evaluation_indices/indicator_library_manager.py (新增)
+- knowledge_management/evaluation_indices/__init__.py (新增)
+- user_interaction/web_action/routers/km_indicator.py (新增)
+- user_interaction/web_action/main.py (注册路由)
+- user_interaction/web_front/modules/indicator_library.html (新增)
+- user_interaction/web_front/js/indicator_library.js (新增)
+- user_interaction/web_front/modules/knowledge.html (新增入口卡片)
+- user_interaction/web_front/js/knowledge.js (新增 openIndicatorLibrary)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-01
+修改内容: 新建结果空间「指标评估管理」子模块（评估对象/模板/计分规则/评估任务/填报/结果快照），全栈实现
+================================================================================
+修改原因
+================================================================================
+1. 需求目标: 构建一套可复用、可配置、开箱即用的指标数据架构与数据模型, 统一管理
+   指标分类、指标元数据、评估模板、评估任务、计分规则、评估结果 (本次落地 2.2~2.6 域)。
+2. 归属约定: 表名前缀 srlt_ 归属结果空间; 业务数据对象放 bo/srlt;
+   数据管理逻辑放 data_storage_services/sql_db_services/srlt;
+   业务管理逻辑放 solution_evaluation_services/evaluation_indices;
+   前端复用 web_front, 入口设置在「评估管理」前端页面中。
+3. 不干扰约束: 与系统既有功能(含旧评估 mock 页面、知识空间指标库)并行, 互不影响;
+   指标通过 indicator_id 复用知识空间 km_indicator_info, 不修改其数据。
+
+================================================================================
+沿用的需求澄清结论 (与指标管理库一致)
+================================================================================
+- 前端目录: 需求写的 user_interface 与现有框架 user_interaction/web_front 不一致,
+  沿用已确认结论「复用现有 web_front」(index.html + iframe + FastAPI 静态挂载)。
+- 入口方式: 在评估管理页 evaluation.html 新增「指标评估管理」入口卡片,
+  点击切换 iframe 到子模块页面。
+- 全新并行实现, 不动旧评估相关代码。
+
+================================================================================
+具体修改 (分层)
+================================================================================
+1. 业务对象层 bo/srlt/ (新增)
+   - evaluation.py: 8 个 Pydantic 模型 + 5 个枚举(ObjectStatus/TemplateStatus/
+     SceneType/CalcType/TaskStatus) + 工厂方法。JSON 字段以 dict 承载,
+     attach_ids 以 List[str] 承载。
+   - __init__.py: 统一导出。
+
+2. 数据表 DDL data_storage_services/SQLite/sqlite_db_init.sql (追加 8 表)
+   - srlt_object_type_dict / srlt_evaluate_object / srlt_evaluate_template /
+     srlt_template_indicator_rel / srlt_score_rule / srlt_evaluate_task /
+     srlt_task_indicator_record / srlt_evaluate_snapshot
+   - 均 IF NOT EXISTS 幂等; 快照表 task_id 唯一(一对一); 对象表(object_type,object_code)
+     联合唯一; 追加对象类型字典 6 条预置数据(org/system/requirement/process/project/staff)。
+
+3. 数据管理服务层 data_storage_services/sql_db_services/srlt/ (新增)
+   - evaluation_service.py: SrltEvaluationService, 基于 SQLiteOperator,
+     覆盖 8 表 CRUD/分页/过滤; JSON 与 TEXT、attach_ids 与逗号串透明转换;
+     模板指标全量重置 set_template_indicators; 填报 upsert_record(按 task+indicator);
+     快照 upsert_snapshot(按 task 一对一); 删除保护(对象/模板被任务引用禁止删除)、
+     级联删除(删任务清理填报+快照, 删模板清理指标关联)。
+   - __init__.py: 导出 SrltEvaluationService。
+
+4. 业务管理逻辑层 solution_evaluation_services/evaluation_indices/ (新增)
+   - evaluation_manager.py: EvaluationManager, 编排全生命周期 + 计分引擎:
+     * 计分引擎 compute_score 支持 4 类: 固定分档/线性公式/阶梯阈值/自定义表达式,
+       表达式白名单校验(仅 x 与四则运算)后安全求值。
+     * 模板指标权重总和校验(=100)。
+     * 填报 auto_score 依据模板内独立规则自动计分, 首次填报自动推进任务为「填报中」。
+     * finish_task 按权重加权汇总总分 -> 更新任务「已完成」-> 固化生成快照(含一级分类
+       汇总得分 level_1_category_score + 综合评级 rank_of)。
+   - __init__.py: 导出 EvaluationManager/get_evaluation_manager/rank_of。
+
+5. API 路由层 user_interaction/web_action/
+   - routers/srlt_evaluation.py (新增): 前缀 /api/srlt/evaluation, 统一响应
+     {success,message,data}。含对象类型、评估对象、计分规则、评估模板(+指标配置)、
+     评估任务(+完成)、指标填报、结果快照 共 20+ 端点。
+   - main.py: 注册 app.include_router(srlt_evaluation.router, prefix="/api/srlt/evaluation")。
+
+6. 前端 user_interaction/web_front/
+   - modules/indicator_evaluation.html (新增): 五页签(评估对象/计分规则/评估模板/
+     评估任务/结果快照) + 各实体新增编辑弹窗 + 模板指标权重配置 + 任务填报计分 +
+     完成评估生成快照 + 快照评级色彩看板。沿用平台深色设计系统。
+   - js/indicator_evaluation.js (新增): Vue3 应用, 全量交互 + Toast。
+     模板指标下拉与填报指标来源于知识空间指标库 /api/km/indicator。
+   - modules/evaluation.html: 新增「指标评估管理」入口卡片。
+   - js/evaluation.js: 新增 openIndicatorEvaluation() 切换 iframe 并导出。
+
+================================================================================
+数据结构对照 (需求 → 实现, 前缀 srlt_)
+================================================================================
+- srlt_object_type_dict: type_id(PK)/type_code(唯一)/type_name/remark
+- srlt_evaluate_object: object_id(PK自增)/object_type/object_name/object_code/
+  org_id/ext_json/status/create_time, (object_type,object_code)联合唯一
+- srlt_evaluate_template: template_id(PK自增)/template_name/template_code(唯一)/
+  scene_type/template_desc/total_score/is_preset/version/status/create_user/create_time
+- srlt_template_indicator_rel: rel_id(PK自增)/template_id/indicator_id/weight/
+  template_score_rule_id/sort/must_fill
+- srlt_score_rule: rule_id(PK自增)/rule_name/calc_type/rule_config_json/expression/remark
+- srlt_evaluate_task: task_id(PK自增)/template_id/object_id/task_name/evaluate_cycle/
+  start_time/end_time/task_status/total_score/evaluate_conclusion/fill_user/audit_user/
+  org_id/create_time/finish_time
+- srlt_task_indicator_record: record_id(PK自增)/task_id/indicator_id/raw_value/real_score/
+  score_rule_id/fill_remark/attach_ids/create_time
+- srlt_evaluate_snapshot: snapshot_id(PK自增)/task_id(唯一)/object_id/template_id/
+  object_type/total_score/level_1_category_score/evaluate_rank/snapshot_time
+
+================================================================================
+端到端验证 (全部通过)
+================================================================================
+1. 后端全链路(业务层直连): 8 表创建+对象类型预置6条; 对象CRUD; 计分引擎
+   阶梯(95→100/75→80/30→40)/直填(88.5)/表达式(x*10→90); 模板+指标关联;
+   权重总和校验(50 被拒); 任务创建; 填报 auto_score(100/80); 首次填报推进「填报中」;
+   完成评估加权总分 100*0.6+80*0.4=92.0 → 评级「优秀」; 快照生成含分项汇总; 清理。
+2. HTTP 接口(服务运行态): object_types=6 | object=True | rule=True | template=True |
+   set_ind=True/2 | task=True | rec_scores=100.0,80.0 | finish_score=92.0/rank=优秀 |
+   snapshot=True/92.0 | cleanup=OK。
+3. 静态资源: indicator_evaluation.html 200(37363B)、indicator_evaluation.js 200(含mount)、
+   evaluation.js 含 openIndicatorEvaluation、evaluation.html 含入口。
+
+================================================================================
+思维路径
+================================================================================
+1. 复用范式: 以上一步刚完成并验证的知识空间指标库(km_)为同构样板, BO→DDL→数据服务→
+   业务管理→API→前端 自底向上落地, 每层即时验证, 早发现早修复。
+2. 需求与框架冲突沿用既有澄清: user_interface→web_front、入口设于评估管理页、
+   全新并行不动旧代码, 无需重复询问, 直接按已确认约定执行。
+3. 命名空间隔离: 全部 srlt_ 前缀 + 独立目录, 通过 indicator_id 只读复用 km 指标库,
+   不修改知识空间数据, 满足「不干扰其它功能」。
+4. 计分引擎抽象: 将 4 类 calc_type 收敛到统一 compute_score, 表达式做正则白名单
+   (仅 x 与 +-*/()) 后再受限 eval, 兼顾灵活与安全。
+5. 关系与生命周期: 模板权重校验=100; 填报按 (task,indicator) upsert 幂等;
+   完成评估加权汇总并一对一固化快照(评估完成才重算, 支撑后续快速对比查询), 与需求
+   「评估完成异步生成固化快照」一致。
+6. 删除保护与级联: 对象/模板被任务引用禁止删除; 删任务级联清理填报明细与快照,
+   删模板清理指标关联, 保证数据一致。
+7. 前端对齐设计系统: 五页签一体化管理复用 app.css 深色主题与统一交互(弹窗/分页/检索/
+   Toast/评级色彩), 入口内嵌评估管理页, 符合「入口设在评估管理页」。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/srlt/evaluation.py (新增)
+- bo/srlt/__init__.py (新增)
+- data_storage_services/SQLite/sqlite_db_init.sql (追加 srlt_ 八表 DDL + 预置字典)
+- data_storage_services/sql_db_services/srlt/evaluation_service.py (新增)
+- data_storage_services/sql_db_services/srlt/__init__.py (新增)
+- solution_evaluation_services/evaluation_indices/evaluation_manager.py (新增)
+- solution_evaluation_services/evaluation_indices/__init__.py (新增)
+- user_interaction/web_action/routers/srlt_evaluation.py (新增)
+- user_interaction/web_action/main.py (注册路由)
+- user_interaction/web_front/modules/indicator_evaluation.html (新增)
+- user_interaction/web_front/js/indicator_evaluation.js (新增)
+- user_interaction/web_front/modules/evaluation.html (新增入口卡片)
+- user_interaction/web_front/js/evaluation.js (新增 openIndicatorEvaluation)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-01
+修改内容: 删除「知识管理」页知识库清单下的「评价指标库」入口及其全部相关代码与数据库表
+================================================================================
+修改原因
+================================================================================
+用户要求删除知识管理页面「知识库清单」分类下的「评价指标库」入口, 以及相关的代码
+与数据库表, 且不影响其它功能与页面显示。该功能为旧 EvaluationIndex 实现, 与新建的
+知识空间指标管理库(km_)、结果空间指标评估管理(srlt_)相互独立。
+
+经与用户确认: 采用「彻底删除全部相关代码与表」+「对现有数据库 DROP evaluation_indices 表」。
+
+================================================================================
+具体修改 (分层)
+================================================================================
+1. 前端
+   - web_front/js/knowledge.js: 从 knowledgeBases 移除 evaluation 项;
+     默认选中库改为 decomposition; isEvaluation 恒为 false;
+     移除 buildListUrl / loadKnowledgeList / viewKnowledgeDetail /
+     batchDeleteKnowledge / submitUpload / canUploadKnowledge / canSaveEdit /
+     editCurrentFromDetail / editKnowledgeItem / saveKnowledgeEdit 中的指标分支;
+     默认 category 兜底值 evaluation → decomposition。
+   - web_front/modules/knowledge.html: 删除列表条目、详情弹窗、编辑弹窗、上传弹窗中
+     的评价指标(isEvaluation / _isIndex / evaluation)模板块, 仅保留通用知识渲染。
+
+2. 后端路由 user_interaction/web_action/routers/knowledge.py
+   - 删除 EvaluationIndexManager / IndexType / IndexLevel / IndexQueryParams /
+     EvaluationIndex 导入与 get_index_manager / _serialize_index;
+   - 删除 IndexAddRequest / IndexUpdateRequest / IndexDeleteRequest;
+   - 删除 /indices/list、/indices/detail、/indices/add、/indices/update、
+     /indices/delete 全部端点;
+   - /bases 移除「评价指标库」项; /search 移除 evaluation 分支, 默认 category 改 decomposition;
+   - KnowledgeAddRequest.category 默认值 evaluation → decomposition。
+
+3. 业务/数据/模型层
+   - 删除 knowledge_management/index_manager.py (EvaluationIndexManager)。
+   - 删除 data_storage_services/sql_db_services/evaluation_index_service.py。
+   - knowledge_management/models.py: 删除 IndexType / IndexLevel / EvaluationIndex /
+     IndexQueryParams, 保留 Knowledge / KnowledgeQueryParams。
+   - knowledge_management/__init__.py: 移除上述指标相关导出。
+   - data_storage_services/sql_db_services/__init__.py 与
+     data_storage_services/__init__.py: 移除 EvaluationIndexService 导入与 __all__ 导出。
+
+4. 数据库
+   - SQLite/sqlite_db_init.sql: 删除 evaluation_indices 建表语句。
+   - 对现有 DB/SQLite/simulation.db 与 Simulation_Plantform/DB/SQLite/simulation.db
+     执行 DROP TABLE IF EXISTS evaluation_indices。
+   - 删除旧数据文件 knowledge_management/evaluation_indices/indices.json
+     (注意: 该目录仍保留, 因其现承载新建 km 指标库业务逻辑代码, 未删除目录本身)。
+
+5. 测试
+   - 删除 test/test_db/test_evaluation_index_service.py 并从 test_db/run_tests.py 清单移除。
+   - 删除 test/test_km/test_index_manager.py 与 test/test_km/test_integration.py
+     (均针对已删除的 EvaluationIndex 功能)。
+
+================================================================================
+不受影响 (验证保留)
+================================================================================
+- 知识管理页其它库: 方案拆解库 / 仿真知识库 / 其他知识库 正常。
+- 知识空间「指标管理库」(km_ 前缀, /api/km/indicator) 独立保留, 不受影响。
+- 结果空间「指标评估管理」(srlt_ 前缀, /api/srlt/evaluation) 独立保留, 不受影响。
+- knowledge_management.knowledge_manager 与 KnowledgeService 无改动。
+
+================================================================================
+思维路径
+================================================================================
+1. 先辨识对象: 明确用户所指为「知识库清单」下的旧「评价指标库」(EvaluationIndex),
+   区别于近期新增、位于「专业库」入口的「指标管理库」(km_)。
+2. 全量溯源: grep 定位评价指标在 前端(html/js)、路由(knowledge.py)、
+   业务(index_manager)、数据服务(evaluation_index_service)、模型(models Index*)、
+   DDL(evaluation_indices)、包导出(两处 __init__)、测试 的全部足迹。
+3. 依赖安全: 确认 knowledge_manager 与其它库不依赖指标; Knowledge.index_ids 仅为
+   普通列表字段, 保留无害; 旧数据文件所在目录已被新 km 模块复用, 只删数据文件不删目录。
+4. 与用户对齐删除深度与建表处理(彻底删除 + DROP), 再执行破坏性操作。
+5. 逐层删除后即时验证: import 全链路无报错、无 /indices 路由、/bases 无评价指标、
+   其它库列表正常、页面无「评价指标库」文案。
+
+================================================================================
+受影响文件
+================================================================================
+- user_interaction/web_front/js/knowledge.js (移除评价指标逻辑)
+- user_interaction/web_front/modules/knowledge.html (移除评价指标渲染块)
+- user_interaction/web_action/routers/knowledge.py (删除 /indices 接口与相关代码)
+- knowledge_management/index_manager.py (删除)
+- knowledge_management/models.py (删除 Index* 模型)
+- knowledge_management/__init__.py (移除指标导出)
+- data_storage_services/sql_db_services/evaluation_index_service.py (删除)
+- data_storage_services/sql_db_services/__init__.py (移除导出)
+- data_storage_services/__init__.py (移除导出)
+- data_storage_services/SQLite/sqlite_db_init.sql (删除 evaluation_indices 建表)
+- DB/SQLite/simulation.db 与 Simulation_Plantform/DB/SQLite/simulation.db (DROP 表)
+- knowledge_management/evaluation_indices/indices.json (删除数据文件)
+- test/test_db/test_evaluation_index_service.py (删除)
+- test/test_db/run_tests.py (清单移除)
+- test/test_km/test_index_manager.py (删除)
+- test/test_km/test_integration.py (删除)
+- knowledge_management/evaluation_indices/indicator_library_manager.py (更新注释)
+- 修改记录.log (本文件)

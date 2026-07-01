@@ -145,22 +145,6 @@ CREATE TABLE IF NOT EXISTS task_manifests (
     updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS evaluation_indices (
-    index_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    evaluation_method TEXT NOT NULL,
-    agent_ids TEXT NOT NULL,
-    index_type TEXT NOT NULL,
-    index_level TEXT NOT NULL,
-    parent_id TEXT,
-    weight REAL NOT NULL DEFAULT 1.0,
-    score_range TEXT NOT NULL DEFAULT '(0, 100)',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    is_active INTEGER NOT NULL DEFAULT 1
-);
-
 CREATE TABLE IF NOT EXISTS knowledge (
     knowledge_id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -574,3 +558,209 @@ CREATE TABLE IF NOT EXISTS senv_solution_revision (
 );
 
 CREATE INDEX IF NOT EXISTS idx_senv_solution_revision_sid ON senv_solution_revision(solution_id, simulation_task_id, simulation_task_batch);
+
+-- ============================================================================
+-- 知识空间 · 指标管理库 (前缀 km_)
+-- ============================================================================
+
+-- 指标分类分级目录表: 树形存储指标目录, 所有指标挂载至该分类树下
+CREATE TABLE IF NOT EXISTS km_indicator_category (
+    category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    category_name TEXT NOT NULL,
+    category_code TEXT NOT NULL UNIQUE,
+    level INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0,
+    scene_tag TEXT,
+    remark TEXT,
+    status INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL,
+    update_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_km_category_parent ON km_indicator_category(parent_id);
+CREATE INDEX IF NOT EXISTS idx_km_category_level ON km_indicator_category(level);
+CREATE INDEX IF NOT EXISTS idx_km_category_scene ON km_indicator_category(scene_tag);
+CREATE INDEX IF NOT EXISTS idx_km_category_status ON km_indicator_category(status);
+
+-- 通用指标主表: 全局唯一基础指标, 跨模板复用, 含评估口径/阈值/标准
+CREATE TABLE IF NOT EXISTS km_indicator_info (
+    indicator_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL,
+    indicator_name TEXT NOT NULL,
+    indicator_code TEXT NOT NULL UNIQUE,
+    indicator_desc TEXT,
+    data_type INTEGER NOT NULL DEFAULT 1,
+    unit TEXT,
+    standard_value TEXT,
+    min_threshold REAL,
+    max_threshold REAL,
+    positive_flag INTEGER NOT NULL DEFAULT 1,
+    default_score_rule_id INTEGER,
+    tag_list TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
+    status INTEGER NOT NULL DEFAULT 1,
+    create_user INTEGER,
+    create_time TEXT NOT NULL,
+    update_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_km_indicator_category ON km_indicator_info(category_id);
+CREATE INDEX IF NOT EXISTS idx_km_indicator_data_type ON km_indicator_info(data_type);
+CREATE INDEX IF NOT EXISTS idx_km_indicator_tag ON km_indicator_info(tag_list);
+CREATE INDEX IF NOT EXISTS idx_km_indicator_status ON km_indicator_info(status);
+
+-- 指标配套附件标准表: 存储指标打分细则/行业规范/示例文档
+CREATE TABLE IF NOT EXISTS km_indicator_attach (
+    attach_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    indicator_id INTEGER NOT NULL,
+    file_name TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    attach_type INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_km_attach_indicator ON km_indicator_attach(indicator_id);
+
+-- ============================================================================
+-- 结果空间 · 指标评估管理 (前缀 srlt_)
+-- ============================================================================
+
+-- 评估对象类型字典
+CREATE TABLE IF NOT EXISTS srlt_object_type_dict (
+    type_id INTEGER PRIMARY KEY,
+    type_code TEXT NOT NULL UNIQUE,
+    type_name TEXT NOT NULL,
+    remark TEXT
+);
+
+-- 评估对象主表
+CREATE TABLE IF NOT EXISTS srlt_evaluate_object (
+    object_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    object_type INTEGER NOT NULL,
+    object_name TEXT NOT NULL,
+    object_code TEXT NOT NULL,
+    org_id INTEGER,
+    ext_json TEXT,
+    status INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL,
+    UNIQUE (object_type, object_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_object_type ON srlt_evaluate_object(object_type);
+CREATE INDEX IF NOT EXISTS idx_srlt_object_org ON srlt_evaluate_object(org_id);
+CREATE INDEX IF NOT EXISTS idx_srlt_object_status ON srlt_evaluate_object(status);
+
+-- 评估模板主表
+CREATE TABLE IF NOT EXISTS srlt_evaluate_template (
+    template_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_name TEXT NOT NULL,
+    template_code TEXT NOT NULL UNIQUE,
+    scene_type INTEGER NOT NULL DEFAULT 1,
+    template_desc TEXT,
+    total_score INTEGER NOT NULL DEFAULT 100,
+    is_preset INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 1,
+    status INTEGER NOT NULL DEFAULT 1,
+    create_user INTEGER,
+    create_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_template_scene ON srlt_evaluate_template(scene_type);
+CREATE INDEX IF NOT EXISTS idx_srlt_template_preset ON srlt_evaluate_template(is_preset);
+CREATE INDEX IF NOT EXISTS idx_srlt_template_status ON srlt_evaluate_template(status);
+
+-- 模板指标关联权重表
+CREATE TABLE IF NOT EXISTS srlt_template_indicator_rel (
+    rel_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL,
+    indicator_id INTEGER NOT NULL,
+    weight REAL NOT NULL DEFAULT 0,
+    template_score_rule_id INTEGER,
+    sort INTEGER NOT NULL DEFAULT 0,
+    must_fill INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_tir_template ON srlt_template_indicator_rel(template_id, indicator_id);
+CREATE INDEX IF NOT EXISTS idx_srlt_tir_indicator ON srlt_template_indicator_rel(indicator_id);
+
+-- 指标计分规则表
+CREATE TABLE IF NOT EXISTS srlt_score_rule (
+    rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_name TEXT NOT NULL,
+    calc_type INTEGER NOT NULL DEFAULT 1,
+    rule_config_json TEXT,
+    expression TEXT,
+    remark TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_rule_calc_type ON srlt_score_rule(calc_type);
+
+-- 评估任务主表
+CREATE TABLE IF NOT EXISTS srlt_evaluate_task (
+    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL,
+    object_id INTEGER NOT NULL,
+    task_name TEXT NOT NULL,
+    evaluate_cycle TEXT,
+    start_time TEXT,
+    end_time TEXT,
+    task_status INTEGER NOT NULL DEFAULT 0,
+    total_score REAL,
+    evaluate_conclusion TEXT,
+    fill_user INTEGER,
+    audit_user INTEGER,
+    org_id INTEGER,
+    create_time TEXT NOT NULL,
+    finish_time TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_task_template ON srlt_evaluate_task(template_id, object_id);
+CREATE INDEX IF NOT EXISTS idx_srlt_task_cycle ON srlt_evaluate_task(evaluate_cycle);
+CREATE INDEX IF NOT EXISTS idx_srlt_task_status ON srlt_evaluate_task(task_status);
+CREATE INDEX IF NOT EXISTS idx_srlt_task_fill_user ON srlt_evaluate_task(fill_user);
+CREATE INDEX IF NOT EXISTS idx_srlt_task_org ON srlt_evaluate_task(org_id);
+
+-- 评估指标填报明细表
+CREATE TABLE IF NOT EXISTS srlt_task_indicator_record (
+    record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL,
+    indicator_id INTEGER NOT NULL,
+    raw_value TEXT,
+    real_score REAL,
+    score_rule_id INTEGER,
+    fill_remark TEXT,
+    attach_ids TEXT,
+    create_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_record_task ON srlt_task_indicator_record(task_id, indicator_id);
+CREATE INDEX IF NOT EXISTS idx_srlt_record_score ON srlt_task_indicator_record(real_score);
+
+-- 评估结果快照宽表
+CREATE TABLE IF NOT EXISTS srlt_evaluate_snapshot (
+    snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL UNIQUE,
+    object_id INTEGER NOT NULL,
+    template_id INTEGER NOT NULL,
+    object_type INTEGER NOT NULL,
+    total_score REAL,
+    level_1_category_score TEXT,
+    evaluate_rank TEXT,
+    snapshot_time TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_srlt_snapshot_object ON srlt_evaluate_snapshot(object_id, template_id);
+CREATE INDEX IF NOT EXISTS idx_srlt_snapshot_type ON srlt_evaluate_snapshot(object_type);
+CREATE INDEX IF NOT EXISTS idx_srlt_snapshot_score ON srlt_evaluate_snapshot(total_score);
+CREATE INDEX IF NOT EXISTS idx_srlt_snapshot_rank ON srlt_evaluate_snapshot(evaluate_rank);
+CREATE INDEX IF NOT EXISTS idx_srlt_snapshot_time ON srlt_evaluate_snapshot(snapshot_time);
+
+-- 评估对象类型字典预置数据
+INSERT OR IGNORE INTO srlt_object_type_dict (type_id, type_code, type_name, remark) VALUES
+    (1, 'org', '组织/企业', '组织或企业级评估主体'),
+    (2, 'system', '软件系统', '软件系统评估主体'),
+    (3, 'requirement', '软件需求', '软件需求评估主体'),
+    (4, 'process', '业务流程', '业务流程评估主体'),
+    (5, 'project', '项目', '项目评估主体'),
+    (6, 'staff', '人员', '人员评估主体');

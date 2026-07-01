@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指标管理库 - 仿真平台</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <style>
+        .il-wrap { display: flex; gap: 16px; min-height: calc(100vh - 72px); padding: 16px 16px 16px 0; box-sizing: border-box; }
+        .il-side { width: 300px; flex-shrink: 0; background: rgba(15,23,42,0.6); border: 1px solid rgba(71,85,105,0.35); border-radius: 12px; padding: 14px; overflow-y: auto; max-height: calc(100vh - 72px); }
+        .il-side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .il-side-title { font-size: 13px; color: #94a3b8; letter-spacing: 2px; font-weight: 600; }
+        .il-tree-node { user-select: none; }
+        .il-node-row { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all .15s ease; }
+        .il-node-row:hover { background: rgba(71,85,105,0.25); }
+        .il-node-row.active { background: rgba(79,70,229,0.22); border-color: rgba(99,102,241,0.55); }
+        .il-node-toggle { width: 16px; text-align: center; color: #64748b; font-size: 11px; flex-shrink: 0; }
+        .il-node-name { font-size: 14px; color: #e2e8f0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .il-node-count { font-size: 11px; color: #818cf8; background: rgba(79,70,229,0.18); border-radius: 999px; padding: 0 7px; }
+        .il-node-actions { display: none; gap: 4px; }
+        .il-node-row:hover .il-node-actions { display: flex; }
+        .il-node-mini { font-size: 12px; color: #94a3b8; cursor: pointer; padding: 0 3px; }
+        .il-node-mini:hover { color: #e2e8f0; }
+        .il-children { margin-left: 14px; border-left: 1px dashed rgba(71,85,105,0.4); padding-left: 4px; }
+        .il-lvl-badge { font-size: 10px; color: #22d3ee; border: 1px solid rgba(6,182,212,0.4); border-radius: 4px; padding: 0 4px; flex-shrink: 0; }
+        .il-main { flex: 1; min-width: 0; background: rgba(15,23,42,0.6); border: 1px solid rgba(71,85,105,0.35); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; overflow: auto; max-height: calc(100vh - 72px); }
+        .il-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .il-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+        .il-title small { color: #94a3b8; font-weight: 400; margin-left: 8px; font-size: 12px; }
+        .il-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .il-searchbar { display: flex; align-items: center; gap: 6px; background: rgba(30,41,59,0.9); border: 1px solid rgba(71,85,105,0.5); border-radius: 8px; padding: 4px 8px; }
+        .il-searchbar input { background: transparent; border: none; outline: none; color: #e2e8f0; font-size: 13px; min-width: 200px; }
+        .il-searchbar input::placeholder { color: #64748b; }
+        .il-filter-select { background: rgba(30,41,59,0.9); color: #e2e8f0; border: 1px solid rgba(71,85,105,0.5); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
+        .il-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 2px; }
+        .il-card { background: rgba(30,41,59,0.55); border: 1px solid rgba(71,85,105,0.35); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; transition: all .15s ease; }
+        .il-card:hover { border-color: rgba(99,102,241,0.5); background: rgba(30,41,59,0.8); }
+        .il-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .il-ind-name { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+        .il-ind-code { font-size: 12px; color: #64748b; margin-left: 8px; font-family: monospace; }
+        .il-ind-desc { font-size: 13px; color: #94a3b8; margin-top: 6px; line-height: 1.6; }
+        .il-ind-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+        .il-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(71,85,105,0.35); color: #cbd5e1; }
+        .il-chip.dt { background: rgba(6,182,212,0.18); color: #22d3ee; }
+        .il-chip.pos { background: rgba(34,197,94,0.18); color: #4ade80; }
+        .il-chip.neg { background: rgba(245,158,11,0.18); color: #fbbf24; }
+        .il-chip.st1 { background: rgba(34,197,94,0.18); color: #4ade80; }
+        .il-chip.st0 { background: rgba(148,163,184,0.2); color: #cbd5e1; }
+        .il-chip.st2 { background: rgba(245,158,11,0.18); color: #fbbf24; }
+        .il-meta-sm { font-size: 12px; color: #64748b; }
+        .il-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .il-empty { padding: 48px; text-align: center; color: #94a3b8; }
+        .il-empty .ei { font-size: 46px; margin-bottom: 10px; }
+        .il-pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(71,85,105,0.35); font-size: 13px; color: #cbd5e1; flex-wrap: wrap; gap: 8px; }
+        .il-pagination select { background: rgba(30,41,59,0.9); color: #e2e8f0; border: 1px solid rgba(71,85,105,0.5); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+        .btn { padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(71,85,105,0.5); background: rgba(30,41,59,0.9); color: #e2e8f0; font-size: 13px; cursor: pointer; transition: all .15s ease; }
+        .btn:hover { border-color: rgba(99,102,241,0.6); }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-primary { background: linear-gradient(135deg, #4f46e5, #4338ca); border-color: transparent; color: #fff; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-secondary { background: rgba(51,65,85,0.7); }
+        .btn-danger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+        .btn-danger:hover { background: rgba(239,68,68,0.28); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.72); display: flex; align-items: flex-start; justify-content: center; padding: 24px 0; overflow-y: auto; z-index: 50; }
+        .modal-box { background: #111827; border: 1px solid rgba(71,85,105,0.5); border-radius: 16px; width: 92%; max-width: 640px; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); animation: mup .22s ease; }
+        @keyframes mup { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(71,85,105,0.35); }
+        .modal-head h3 { font-size: 16px; color: #f1f5f9; margin: 0; }
+        .modal-close { background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; line-height: 1; }
+        .modal-close:hover { color: #f1f5f9; }
+        .modal-body { padding: 18px 20px; }
+        .modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid rgba(71,85,105,0.35); }
+        .fg { margin-bottom: 12px; }
+        .fg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .fg label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; letter-spacing: 1px; }
+        .fg label .req { color: #f87171; }
+        .fg .fi { width: 100%; box-sizing: border-box; background: rgba(30,41,59,0.9); border: 1px solid rgba(71,85,105,0.5); border-radius: 8px; padding: 8px 10px; color: #e2e8f0; font-size: 13px; outline: none; }
+        .fg .fi:focus { border-color: rgba(99,102,241,0.7); }
+        .fg textarea.fi { resize: vertical; min-height: 68px; }
+        .fg-full { grid-column: 1 / -1; }
+        .attach-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(30,41,59,0.6); border: 1px solid rgba(71,85,105,0.35); border-radius: 8px; margin-bottom: 6px; }
+        .attach-item .ai-name { flex: 1; font-size: 13px; color: #e2e8f0; }
+        .detail-row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed rgba(71,85,105,0.3); }
+        .detail-row .dl { width: 120px; flex-shrink: 0; color: #94a3b8; font-size: 12px; }
+        .detail-row .dv { flex: 1; color: #e2e8f0; font-size: 13px; word-break: break-word; }
+        .toast-wrap { position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: #1e293b; border: 1px solid rgba(71,85,105,0.6); border-left: 3px solid #4f46e5; border-radius: 8px; padding: 10px 14px; min-width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: mup .2s ease; }
+        .toast.ok { border-left-color: #22c55e; }
+        .toast.err { border-left-color: #ef4444; }
+        .toast .tt { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+        .toast .tm { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        @media (max-width: 900px) { .il-side { width: 200px; } .fg-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="bg-animation"></div>
+        <main class="main-container">
+            <div class="il-wrap">
+                <aside class="il-side">
+                    <div class="il-side-head">
+                        <div class="il-side-title">指标分类分级目录</div>
+                        <button class="btn btn-sm" @click="openCategoryModal(null, 0, 1)">+ 大类</button>
+                    </div>
+                    <div class="il-node-row" :class="{ active: selectedCategoryId === null }" @click="selectCategory(null)">
+                        <span class="il-node-toggle"></span>
+                        <span class="il-node-name">全部指标</span>
+                        <span class="il-node-count">{{ totalAll }}</span>
+                    </div>
+                    <tree-node
+                        v-for="node in categoryTree"
+                        :key="node.category_id"
+                        :node="node"
+                        :selected-id="selectedCategoryId"
+                        @select="selectCategory"
+                        @add-child="(pid, lvl) => openCategoryModal(null, pid, lvl)"
+                        @edit="(n, pid) => openCategoryModal(n, pid)"
+                        @remove="deleteCategory"
+                    ></tree-node>
+                    <div v-if="categoryTree.length === 0" style="color:#64748b;font-size:12px;padding:12px 4px;">
+                        暂无分类，点击右上角「+ 大类」创建一级分类
+                    </div>
+                </aside>
+
+                <section class="il-main">
+                    <div class="il-toolbar">
+                        <div class="il-title">
+                            {{ currentCategoryName }}
+                            <small>共 {{ total }} 个指标</small>
+                        </div>
+                        <div class="il-toolbar-right">
+                            <div class="il-searchbar">
+                                <input type="text" v-model="keyword" placeholder="检索指标名称/编码/说明/标签..." @keyup.enter="reload">
+                                <button class="btn btn-sm" @click="reload">检索</button>
+                                <button class="btn btn-sm btn-secondary" v-if="keyword" @click="keyword=''; reload()">清除</button>
+                            </div>
+                            <select class="il-filter-select" v-model="filterDataType" @change="reload">
+                                <option :value="null">全部类型</option>
+                                <option :value="1">定量数值</option>
+                                <option :value="2">定性打分</option>
+                                <option :value="3">布尔合规</option>
+                                <option :value="4">枚举选项</option>
+                            </select>
+                            <select class="il-filter-select" v-model="filterStatus" @change="reload">
+                                <option :value="null">全部状态</option>
+                                <option :value="1">正常</option>
+                                <option :value="2">草稿</option>
+                                <option :value="0">停用</option>
+                            </select>
+                            <button class="btn btn-primary" @click="openIndicatorModal(null)">+ 新增指标</button>
+                        </div>
+                    </div>
+
+                    <div class="il-list">
+                        <div v-if="indicators.length === 0" class="il-empty">
+                            <div class="ei">📊</div>
+                            <p>{{ keyword ? '未检索到匹配指标' : '当前分类暂无指标，点击「新增指标」创建' }}</p>
+                        </div>
+                        <div v-for="ind in indicators" :key="ind.indicator_id" class="il-card">
+                            <div class="il-card-head">
+                                <div>
+                                    <span class="il-ind-name">{{ ind.indicator_name }}</span>
+                                    <span class="il-ind-code">{{ ind.indicator_code }}</span>
+                                </div>
+                                <div class="il-card-actions">
+                                    <button class="btn btn-sm" @click="viewIndicator(ind)">详情</button>
+                                    <button class="btn btn-sm btn-secondary" @click="openIndicatorModal(ind)">编辑</button>
+                                    <button class="btn btn-sm btn-danger" @click="deleteIndicator(ind)">删除</button>
+                                </div>
+                            </div>
+                            <div class="il-ind-desc" v-if="ind.indicator_desc">{{ ind.indicator_desc }}</div>
+                            <div class="il-ind-meta">
+                                <span class="il-chip dt">{{ dataTypeName(ind.data_type) }}</span>
+                                <span class="il-chip" v-if="ind.unit">单位 {{ ind.unit }}</span>
+                                <span class="il-chip" :class="ind.positive_flag ? 'pos' : 'neg'">{{ ind.positive_flag ? '正向 ↑' : '负向 ↓' }}</span>
+                                <span class="il-chip" :class="'st' + ind.status">{{ statusName(ind.status) }}</span>
+                                <span class="il-meta-sm" v-if="ind.standard_value">基准 {{ ind.standard_value }}</span>
+                                <span class="il-meta-sm" v-if="ind.min_threshold !== null || ind.max_threshold !== null">
+                                    阈值 [{{ ind.min_threshold === null ? '-' : ind.min_threshold }}, {{ ind.max_threshold === null ? '-' : ind.max_threshold }}]
+                                </span>
+                                <span class="il-chip" v-for="(t,i) in ind.tag_list" :key="i">#{{ t }}</span>
+                                <span class="il-meta-sm">v{{ ind.version }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="il-pagination" v-if="total > 0">
+                        <div>每页
+                            <select v-model="pageSize" @change="page=1; reload()">
+                                <option :value="5">5</option>
+                                <option :value="10">10</option>
+                                <option :value="20">20</option>
+                                <option :value="50">50</option>
+                            </select>
+                            条
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button class="btn btn-sm" :disabled="page===1" @click="page--; reload()">上一页</button>
+                            <span>{{ page }} / {{ totalPages }}</span>
+                            <button class="btn btn-sm" :disabled="page>=totalPages" @click="page++; reload()">下一页</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 分类新增/编辑弹窗 -->
+            <div v-if="showCategoryModal" class="modal-overlay" @click.self="showCategoryModal=false">
+                <div class="modal-box">
+                    <div class="modal-head">
+                        <h3>{{ categoryForm.category_id ? '编辑分类' : '新增分类' }}</h3>
+                        <button class="modal-close" @click="showCategoryModal=false">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="fg-grid">
+                            <div class="fg"><label>分类名称 <span class="req">*</span></label>
+                                <input class="fi" v-model="categoryForm.category_name" placeholder="如：软件质量">
+                            </div>
+                            <div class="fg"><label>分类编码 <span class="req">*</span></label>
+                                <input class="fi" v-model="categoryForm.category_code" placeholder="全局唯一，如 SW_QUALITY">
+                            </div>
+                            <div class="fg"><label>层级</label>
+                                <select class="fi" v-model.number="categoryForm.level">
+                                    <option :value="1">1 一级大类</option>
+                                    <option :value="2">2 二级分类</option>
+                                    <option :value="3">3 三级分组</option>
+                                </select>
+                            </div>
+                            <div class="fg"><label>排序序号</label>
+                                <input class="fi" type="number" v-model.number="categoryForm.sort" placeholder="0">
+                            </div>
+                            <div class="fg fg-full"><label>适用场景标签（逗号分隔）</label>
+                                <input class="fi" v-model="categoryForm.scene_tag" placeholder="绩效,系统,需求,流程">
+                            </div>
+                            <div class="fg fg-full"><label>业务描述</label>
+                                <textarea class="fi" v-model="categoryForm.remark" placeholder="分类业务描述"></textarea>
+                            </div>
+                            <div class="fg"><label>状态</label>
+                                <select class="fi" v-model.number="categoryForm.status">
+                                    <option :value="1">启用</option>
+                                    <option :value="0">停用</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="font-size:12px;color:#64748b;" v-if="categoryForm.parent_id">父分类ID：{{ categoryForm.parent_id }}</div>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn btn-secondary" @click="showCategoryModal=false">取消</button>
+                        <button class="btn btn-primary" @click="submitCategory" :disabled="!categoryForm.category_name.trim() || !categoryForm.category_code.trim()">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 指标新增/编辑弹窗 -->
+            <div v-if="showIndicatorModal" class="modal-overlay" @click.self="showIndicatorModal=false">
+                <div class="modal-box" style="max-width:720px;">
+                    <div class="modal-head">
+                        <h3>{{ indicatorForm.indicator_id ? '编辑指标' : '新增指标' }}</h3>
+                        <button class="modal-close" @click="showIndicatorModal=false">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="fg-grid">
+                            <div class="fg"><label>归属分类 <span class="req">*</span></label>
+                                <select class="fi" v-model.number="indicatorForm.category_id">
+                                    <option :value="null" disabled>请选择分类</option>
+                                    <option v-for="c in flatCategories" :key="c.category_id" :value="c.category_id">
+                                        {{ '　'.repeat((c.level||1)-1) }}{{ c.category_name }} ({{ c.category_code }})
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="fg"><label>数据类型 <span class="req">*</span></label>
+                                <select class="fi" v-model.number="indicatorForm.data_type">
+                                    <option :value="1">定量数值</option>
+                                    <option :value="2">定性打分</option>
+                                    <option :value="3">布尔合规</option>
+                                    <option :value="4">枚举选项</option>
+                                </select>
+                            </div>
+                            <div class="fg"><label>指标名称 <span class="req">*</span></label>
+                                <input class="fi" v-model="indicatorForm.indicator_name" placeholder="如：平均无故障时间">
+                            </div>
+                            <div class="fg"><label>指标编码 <span class="req">*</span></label>
+                                <input class="fi" v-model="indicatorForm.indicator_code" placeholder="全局唯一，如 MTBF">
+                            </div>
+                            <div class="fg fg-full"><label>指标定义 / 评估口径 / 计算说明</label>
+                                <textarea class="fi" v-model="indicatorForm.indicator_desc" placeholder="供评估人员查阅的标准口径"></textarea>
+                            </div>
+                            <div class="fg"><label>单位</label>
+                                <input class="fi" v-model="indicatorForm.unit" placeholder="%、天、ms、万元、分">
+                            </div>
+                            <div class="fg"><label>基准标准值</label>
+                                <input class="fi" v-model="indicatorForm.standard_value" placeholder="行业/企业基准">
+                            </div>
+                            <div class="fg"><label>最低合格阈值</label>
+                                <input class="fi" type="number" step="any" v-model.number="indicatorForm.min_threshold">
+                            </div>
+                            <div class="fg"><label>最优达标阈值</label>
+                                <input class="fi" type="number" step="any" v-model.number="indicatorForm.max_threshold">
+                            </div>
+                            <div class="fg"><label>指标方向</label>
+                                <select class="fi" v-model.number="indicatorForm.positive_flag">
+                                    <option :value="1">正向（越大越好）</option>
+                                    <option :value="0">负向（越小越好）</option>
+                                </select>
+                            </div>
+                            <div class="fg"><label>状态</label>
+                                <select class="fi" v-model.number="indicatorForm.status">
+                                    <option :value="1">正常</option>
+                                    <option :value="2">草稿</option>
+                                    <option :value="0">停用</option>
+                                </select>
+                            </div>
+                            <div class="fg"><label>版本号</label>
+                                <input class="fi" type="number" v-model.number="indicatorForm.version" min="1">
+                            </div>
+                            <div class="fg"><label>默认计分规则ID</label>
+                                <input class="fi" type="number" v-model.number="indicatorForm.default_score_rule_id">
+                            </div>
+                            <div class="fg fg-full"><label>场景标签（逗号分隔）</label>
+                                <input class="fi" v-model="indicatorForm.tag_list" placeholder="绩效,系统,核心">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn btn-secondary" @click="showIndicatorModal=false">取消</button>
+                        <button class="btn btn-primary" @click="submitIndicator" :disabled="!canSubmitIndicator">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 指标详情弹窗（含附件管理） -->
+            <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal=false">
+                <div class="modal-box" style="max-width:720px;">
+                    <div class="modal-head">
+                        <h3>指标详情</h3>
+                        <button class="modal-close" @click="showDetailModal=false">×</button>
+                    </div>
+                    <div class="modal-body" v-if="detail">
+                        <div class="detail-row"><div class="dl">指标名称</div><div class="dv">{{ detail.indicator_name }}</div></div>
+                        <div class="detail-row"><div class="dl">指标编码</div><div class="dv">{{ detail.indicator_code }}</div></div>
+                        <div class="detail-row"><div class="dl">数据类型</div><div class="dv">{{ dataTypeName(detail.data_type) }}</div></div>
+                        <div class="detail-row"><div class="dl">评估口径</div><div class="dv">{{ detail.indicator_desc || '-' }}</div></div>
+                        <div class="detail-row"><div class="dl">单位/基准</div><div class="dv">{{ detail.unit || '-' }} / {{ detail.standard_value || '-' }}</div></div>
+                        <div class="detail-row"><div class="dl">阈值区间</div><div class="dv">[{{ detail.min_threshold === null ? '-' : detail.min_threshold }}, {{ detail.max_threshold === null ? '-' : detail.max_threshold }}]</div></div>
+                        <div class="detail-row"><div class="dl">指标方向</div><div class="dv">{{ detail.positive_flag ? '正向（越大越好）' : '负向（越小越好）' }}</div></div>
+                        <div class="detail-row"><div class="dl">场景标签</div><div class="dv">{{ (detail.tag_list||[]).join('、') || '-' }}</div></div>
+                        <div class="detail-row"><div class="dl">版本/状态</div><div class="dv">v{{ detail.version }} · {{ statusName(detail.status) }}</div></div>
+
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
+                            <div style="font-size:13px;font-weight:600;color:#cbd5e1;">配套附件标准</div>
+                            <button class="btn btn-sm" @click="openAttachForm">+ 添加附件</button>
+                        </div>
+                        <div v-if="attachForm.show" style="background:rgba(30,41,59,0.6);border:1px solid rgba(71,85,105,0.4);border-radius:8px;padding:10px;margin-bottom:8px;">
+                            <div class="fg-grid">
+                                <div class="fg"><label>附件名称 <span class="req">*</span></label>
+                                    <input class="fi" v-model="attachForm.file_name" placeholder="如：MTBF评分细则.pdf">
+                                </div>
+                                <div class="fg"><label>附件类型</label>
+                                    <select class="fi" v-model.number="attachForm.attach_type">
+                                        <option :value="1">行业标准</option>
+                                        <option :value="2">打分示例</option>
+                                        <option :value="3">评估细则</option>
+                                    </select>
+                                </div>
+                                <div class="fg fg-full"><label>文件访问地址 <span class="req">*</span></label>
+                                    <input class="fi" v-model="attachForm.file_url" placeholder="对象存储访问地址 URL">
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                                <button class="btn btn-sm btn-secondary" @click="attachForm.show=false">取消</button>
+                                <button class="btn btn-sm btn-primary" @click="submitAttach" :disabled="!attachForm.file_name.trim() || !attachForm.file_url.trim()">添加</button>
+                            </div>
+                        </div>
+                        <div v-if="(detail.attaches||[]).length === 0 && !attachForm.show" style="color:#64748b;font-size:12px;padding:6px 0;">暂无配套附件</div>
+                        <div v-for="a in (detail.attaches||[])" :key="a.attach_id" class="attach-item">
+                            <span class="il-chip">{{ attachTypeName(a.attach_type) }}</span>
+                            <a class="ai-name" :href="a.file_url" target="_blank" style="color:#93c5fd;text-decoration:none;">{{ a.file_name }}</a>
+                            <button class="btn btn-sm btn-danger" @click="deleteAttach(a)">删除</button>
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn btn-secondary" @click="showDetailModal=false">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="toast-wrap">
+            <div v-for="t in toasts" :key="t.id" class="toast" :class="t.type">
+                <div class="tt">{{ t.title }}</div>
+                <div class="tm" v-if="t.msg">{{ t.msg }}</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="../js/indicator_library.js?v=2026070101"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿"""鍏崇郴鏁版嵁搴撳瓨鍌ㄦ湇鍔″瓙妯″潡
+"""鍏崇郴鏁版嵁搴撳瓨鍌ㄦ湇鍔″瓙妯″潡
 
 鎻愪緵灞忚斀搴曞眰鍏蜂綋鍏崇郴鏁版嵁搴撳疄鐜扮粏鑺傜殑閫氱敤鎿嶄綔鏈嶅姟銆?鏍规嵁閰嶇疆鍙傛暟閫夋嫨杩炴帴鍒板叿浣撶殑鏁版嵁搴撳疄渚嬶紝榛樿杩炴帴SQLite鏁版嵁搴撱€?"""
 
@@ -11,7 +11,6 @@ from .role_service import RoleService
 from .task_flow_group_service import TaskFlowGroupService
 from .tasks_graph_service import TasksGraphService
 from .task_manifest_service import TaskManifestService
-from .evaluation_index_service import EvaluationIndexService
 from .knowledge_service import KnowledgeService
 from .ssys import SsysOrganizationService, SsysEmployeeService, SsysRoleService
 from .smeta import SmetaOrganizationService, SmetaEmployeeService, SmetaRoleService, SmetaFileService, SmetaSolutionService
@@ -27,7 +26,6 @@ __all__ = [
     'TaskFlowGroupService',
     'TasksGraphService',
     'TaskManifestService',
-    'EvaluationIndexService',
     'KnowledgeService',
     'SsysOrganizationService',
     'SsysEmployeeService',

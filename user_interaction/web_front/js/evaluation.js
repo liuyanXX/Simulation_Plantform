@@ -122,6 +122,11 @@ createApp({
       showToast('评估中止', '评估已中止', 'warning');
     };
 
+    const openIndicatorEvaluation = () => {
+      // 评估管理页运行在 index.html 的 iframe 中，切换 iframe 到指标评估管理页面
+      window.location.href = 'indicator_evaluation.html';
+    };
+
     return {
       toasts, showToast,
       safeJsonParse, safeLen, splitTags, formatDateTime,
@@ -129,7 +134,8 @@ createApp({
       evaluationStep, evaluationForm,
       availableIndices, availableAgents, index_scores,
       toggleIndex, isAgentSelected, toggleAgent,
-      canStartEvaluation, startEvaluation, abortEvaluation
+      canStartEvaluation, startEvaluation, abortEvaluation,
+      openIndicatorEvaluation
     };
   }
 }).mount('#app');
