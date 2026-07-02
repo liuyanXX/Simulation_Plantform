@@ -17,18 +17,20 @@
             <div class="sys-wrap">
                 <!-- 侧边栏 - 标签页导航 -->
                 <aside class="sys-side">
-                    <div class="sys-side-title">系统对象</div>
-                    <div
-                        v-for="tab in tabs"
-                        :key="tab.key"
-                        class="sys-tab-item"
-                        :class="{ active: currentTab === tab.key }"
-                        @click="selectTab(tab.key)"
-                    >
-                        <span class="tab-icon">{{ tab.icon }}</span>
-                        <span class="tab-label">{{ tab.label }}</span>
-                        <span class="tab-count" v-if="tab.count >= 0">{{ tab.count }}</span>
-                    </div>
+                    <template v-for="grp in menuGroups" :key="grp.title">
+                        <div class="sys-side-title">{{ grp.title }}</div>
+                        <div
+                            v-for="tab in grp.items"
+                            :key="tab.key"
+                            class="sys-tab-item"
+                            :class="{ active: currentTab === tab.key }"
+                            @click="selectTab(tab.key)"
+                        >
+                            <span class="tab-icon">{{ tab.icon }}</span>
+                            <span class="tab-label">{{ tab.label }}</span>
+                            <span class="tab-count" v-if="tab.count >= 0">{{ tab.count }}</span>
+                        </div>
+                    </template>
                 </aside>
 
                 <!-- 主内容区域 -->
@@ -119,6 +121,16 @@
                         <template v-if="currentTab === 'worker'">
                             <label>部门</label>
                             <input v-model="workerFilter.department" placeholder="部门关键字" @keyup.enter="doSearch">
+                        </template>
+
+                        <!-- 智能员工注册过滤条件 -->
+                        <template v-if="currentTab === 'reg'">
+                            <label>状态</label>
+                            <select v-model="regFilter.status" @change="reloadList">
+                                <option value="">全部</option>
+                                <option value="active">启用</option>
+                                <option value="disabled">停用</option>
+                            </select>
                         </template>
 
                         <div style="flex:1"></div>
@@ -307,6 +319,42 @@
                             </tbody>
                         </table>
 
+                        <!-- 智能员工注册列表 -->
+                        <table v-if="currentTab === 'reg' && paginatedList.length" class="sys-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">ID</th>
+                                    <th style="width:200px;">员工类型</th>
+                                    <th>类型名称</th>
+                                    <th>全路径类名</th>
+                                    <th style="width:100px;">最大数量</th>
+                                    <th style="width:80px;">状态</th>
+                                    <th style="width:160px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="r in paginatedList" :key="'reg-'+r.id">
+                                    <td><code>{{ r.id }}</code></td>
+                                    <td><code>{{ r.worker_type }}</code></td>
+                                    <td>
+                                        <div style="font-weight:600;">{{ r.worker_name }}</div>
+                                        <div style="font-size:12px;color:#94a3b8;">{{ r.description || '' }}</div>
+                                    </td>
+                                    <td><code style="font-size:12px;">{{ r.class_path }}</code></td>
+                                    <td>
+                                        <span class="tag tag-info">{{ r.max_count > 0 ? r.max_count : '不限' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="tag" :class="'tag-' + statusClass(r.status)">{{ statusLabel(r.status) }}</span>
+                                    </td>
+                                    <td class="action-cell">
+                                        <button class="btn btn-sm" @click="openEditReg(r)">编辑</button>
+                                        <button class="btn btn-sm btn-danger" @click="confirmDeleteReg(r)">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
                         <!-- 空状态 -->
                         <div v-if="!paginatedList.length && !isLoading" class="sys-empty">
                             <div class="empty-emoji">📭</div>
@@ -450,6 +498,31 @@
                                     <input class="form-input" v-model="form.roles_raw" placeholder="如：指挥员,参谋,执行人员">
                                 </div>
                             </template>
+
+                            <!-- 智能员工注册表单 -->
+                            <template v-if="currentTab === 'reg'">
+                                <div class="form-group required"><div class="form-label">员工类型（唯一标识）</div>
+                                    <input class="form-input" v-model="form.worker_type" placeholder="如：SolutionUnderstandingWorker">
+                                </div>
+                                <div class="form-group required"><div class="form-label">类型名称</div>
+                                    <input class="form-input" v-model="form.worker_name" placeholder="如：方案理解智能员工">
+                                </div>
+                                <div class="form-group full-width required"><div class="form-label">全路径类名</div>
+                                    <input class="form-input" v-model="form.class_path" placeholder="如：bo.ssys.aiworker.solution_understanding_worker.SolutionUnderstandingWorker">
+                                </div>
+                                <div class="form-group"><div class="form-label">最大数量（0 表示不限制）</div>
+                                    <input class="form-input" v-model="form.max_count" type="number" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group"><div class="form-label">状态</div>
+                                    <select v-model="form.status">
+                                        <option value="active">启用</option>
+                                        <option value="disabled">停用</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width"><div class="form-label">说明</div>
+                                    <textarea v-model="form.description" rows="3" placeholder="可选"></textarea>
+                                </div>
+                            </template>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -487,7 +560,7 @@
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="../js/simulation_plant_common.js?v=2026062902"></script>
-    <script src="../js/system.js?v=2026062902"></script>
+    <script src="../js/simulation_plant_common.js?v=2026070201"></script>
+    <script src="../js/system.js?v=2026070201"></script>
 </body>
 </html>

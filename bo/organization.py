@@ -447,7 +447,7 @@ class OrganizationFactory:
         return root
 
 
-from .ai_worker import AIWorker
+from .ssys.aiworker import AIWorker
 from .task import Task
 Organization.update_forward_refs()
 

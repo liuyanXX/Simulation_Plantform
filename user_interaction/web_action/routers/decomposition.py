@@ -28,7 +28,7 @@ from bo.decomposition_behavior import (
 )
 from bo.role import Role
 from bo.organization import Organization
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 from bo.task import Task
 from bo.task_manifest import TaskManifest
 from bo.tasks_graph import TasksGraph

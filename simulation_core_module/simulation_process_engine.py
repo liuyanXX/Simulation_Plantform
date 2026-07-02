@@ -14,7 +14,7 @@ import time
 import os
 
 from bo.organization import Organization, OrganizationFactory
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 from bo.task import Task
 from .worker_type_registry import WorkerTypeRegistry
 

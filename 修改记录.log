@@ -1634,3 +1634,376 @@ POST /api/knowledge/delete
 - test/test_km/test_integration.py (删除)
 - knowledge_management/evaluation_indices/indicator_library_manager.py (更新注释)
 - 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-02
+修改内容: 优化项目结构，将 bo/ai_worker.py 重构到 bo/ssys/aiworker/ 子包下
+================================================================================
+修改原因
+================================================================================
+用户要求优化项目结构, 将 AIWorker(AI 员工) 业务对象归入系统空间 ssys 命名空间下的
+独立 aiworker 子包, 使 bo 层目录职责更清晰(与 ssys/employee、ssys/organization、
+ssys/role 保持同一命名空间归属)。
+
+================================================================================
+具体修改
+================================================================================
+1. 新建子包 bo/ssys/aiworker/
+   - ai_worker.py: 由 bo/ai_worker.py 迁入。内部相对导入随目录深度调整:
+     from .task import ... → from ...task import ...;
+     from .task_flow_group import ... → from ...task_flow_group import ...;
+     日志目录基准路径上溯层级由 2 层改为 4 层 (bo/ssys/aiworker → Simulation_Plantform),
+     保证 logs/ai_worker.log 仍写入项目根 logs 目录。
+   - __init__.py: 导出 AIWorker。
+2. 删除旧文件 bo/ai_worker.py。
+3. 更新 bo 包内引用:
+   - bo/__init__.py: from .ai_worker import AIWorker → from .ssys.aiworker import AIWorker。
+   - bo/organization.py: from .ai_worker import AIWorker → from .ssys.aiworker import AIWorker。
+4. 更新业务代码引用 (from bo.ai_worker → from bo.ssys.aiworker):
+   - user_interaction/web_action/routers/system.py (create_worker / update_worker 两处)
+   - user_interaction/web_action/routers/decomposition.py
+   - data_storage_services/sql_db_services/worker_service.py
+   - simulation_core_module/simulation_process_engine.py
+   - simulation_core_module/worker_type_registry.py
+   - simulation_core_module/simulation_task.py (裸导入风格: from ai_worker → from ssys.aiworker)
+5. 更新测试引用 (from bo.ai_worker → from bo.ssys.aiworker):
+   - test/test_simulation_core_module/test_worker_type_registry.py
+   - test/test_simulation_core_module/test_simulation_task.py
+   - test/test_simulation_core_module/test_integration.py
+   - test/test_db/test_worker_service.py
+   - test/test_db/test_integration.py
+
+================================================================================
+验证结果
+================================================================================
+1. import 验证: from bo.ssys.aiworker import AIWorker、from bo import AIWorker(同一对象)、
+   bo.organization、worker_type_registry、simulation_process_engine、worker_service、
+   decomposition、system、main 均导入正常。
+2. 全局搜索确认无残留旧引用 (bo.ai_worker / from ai_worker import / from .ai_worker),
+   仅保留新包内 bo/ssys/aiworker/__init__.py 的 from .ai_worker import。
+3. 单元测试:
+   - 仿真核心模块测试套件 run_tests.py 退出码 0 (全部成功)。
+   - test_db/test_worker_service.py 16 项用例全部 ok。
+   - 说明: test_solution_service / test_task_service 的 setUpClass ImportError 为
+     既有测试运行方式的 sys.path 问题(与本次重构无关, 这些用例不引用 AIWorker)。
+
+================================================================================
+思维路径
+================================================================================
+1. 全量溯源: grep 定位 ai_worker/AIWorker 的全部引用点(bo 内部相对导入、业务模块 8 处、
+   测试 5 处、simulation_task 裸导入 1 处)。
+2. 迁移优先保证不破坏: 新文件相对导入随目录层级由 2 级提升到 3 级(...task),
+   日志路径基准同步上溯, 避免日志落点漂移。
+3. 分类处理引用: 包内用相对导入; 业务/测试用绝对 from bo.ssys.aiworker;
+   simulation_task 沿用其既有裸导入风格改为 from ssys.aiworker。
+4. 逐点验证并甄别既有问题: 确认 simulation_task 裸导入引发的 ImportError 属既有
+   sys.path 依赖, 原始代码 organization.py 也已是相对导入, 与本次改动无关;
+   以官方 run_tests.py 套件(退出码 0)与 worker_service 全绿作为通过判据。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/ssys/aiworker/ai_worker.py (新增, 由 bo/ai_worker.py 迁入并调整相对导入/日志路径)
+- bo/ssys/aiworker/__init__.py (新增)
+- bo/ai_worker.py (删除)
+- bo/__init__.py (更新导入路径)
+- bo/organization.py (更新导入路径)
+- user_interaction/web_action/routers/system.py (更新导入)
+- user_interaction/web_action/routers/decomposition.py (更新导入)
+- data_storage_services/sql_db_services/worker_service.py (更新导入)
+- simulation_core_module/simulation_process_engine.py (更新导入)
+- simulation_core_module/worker_type_registry.py (更新导入)
+- simulation_core_module/simulation_task.py (更新裸导入)
+- test/test_simulation_core_module/test_worker_type_registry.py (更新导入)
+- test/test_simulation_core_module/test_simulation_task.py (更新导入)
+- test/test_simulation_core_module/test_integration.py (更新导入)
+- test/test_db/test_worker_service.py (更新导入)
+- test/test_db/test_integration.py (更新导入)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-02
+修改内容: 新建方案理解智能员工类 SolutionUnderstandingWorker（继承 AIWorker）
+================================================================================
+修改原因
+================================================================================
+用户要求创建“方案理解智能员工”类, 负责对原始方案信息进行理解, 生成结构化方案信息;
+要求继承智能员工基础类 AIWorker 的全部方法, 对象代码放入 bo/ssys/aiworker/ 目录,
+数据管理归入系统空间(ssys)。
+
+================================================================================
+具体修改
+================================================================================
+1. 新增 bo/ssys/aiworker/solution_understanding_worker.py
+   - 定义 SolutionUnderstandingWorker(AIWorker) 子类, 继承基础类全部能力
+     (任务清单/排期/持续工作/任务传递等), 扩展“方案理解”能力。
+   - 新增字段 worker_type="SolutionUnderstandingWorker"; 私有属性
+     _understood_solutions 缓存已生成的结构化方案。
+   - 核心方法:
+     * understand(raw_solution_info, ...): 接收字典或纯文本原始方案信息,
+       抽取要素生成结构化 Solution 对象(bo/solution.py)。
+     * understand_document(document): 汇总 SolutionDocument/SolutionFile 文本后理解。
+     * get_understood_solutions(): 返回已理解方案列表。
+   - 解析逻辑:
+     * _understand_from_dict: 兼容中英文键名(purpose/方案目的、objectives/方案目标 等),
+       列表型字段自动归一化。
+     * _understand_from_text: 启发式识别分节标题(方案名称/目的/目标/举措/组织/人员/
+       角色/工作机制/工作内容/限制条件/风险/问题/其他说明), 列表项按顿号/逗号/分号/
+       项目符号拆分; 未归类文本并入 description。
+   - 通过 from ...solution import Solution 延迟导入并 update_forward_refs。
+2. bo/ssys/aiworker/__init__.py: 导出 SolutionUnderstandingWorker。
+3. simulation_core_module/worker_type_registry.py: 导入并默认注册
+   "SolutionUnderstandingWorker" 类型, 便于仿真引擎按类型创建。
+
+================================================================================
+验证结果
+================================================================================
+1. 继承验证: issubclass(SolutionUnderstandingWorker, AIWorker)=True;
+   实例具备 add_task/schedule_tasks/working/stop_working 等基础方法。
+2. 理解能力:
+   - 字典输入: 正确抽取 name/purpose/objectives/organization 等字段, created_by=员工姓名。
+   - 纯文本输入: name=企业数字化转型实施方案、objectives=2项、initiatives=2项、
+     organization=3项、constraints=2项、risks=2项 均正确解析。
+   - 模块 __main__ 演示两种输入均输出完整结构化 Solution JSON, 已理解方案总数=2。
+3. 注册表: WorkerTypeRegistry.is_registered('SolutionUnderstandingWorker')=True,
+   create_worker 正确创建对应子类实例。
+4. 回归: 仿真核心模块测试套件 run_tests.py 退出码 0(未受影响)。
+   (说明: 直接 import simulation_core_module 触发的 'No module named organization'
+    为既有 simulation_task 裸导入的 sys.path 问题, 与本次新增无关。)
+
+================================================================================
+思维路径
+================================================================================
+1. 先读基类与目标数据结构: 通读 AIWorker(能力边界)与 Solution(结构化方案字段),
+   确定“方案理解”输出对齐 Solution 模型。
+2. 继承而非重写: 子类仅新增理解相关方法/字段, 完整保留基类任务处理能力, 满足
+   “继承所有方法”的要求。
+3. 输入多态: 同时支持结构化字典与非结构化文本两条解析路径, 提升开箱即用性。
+4. 归属与延迟导入: 代码置于 bo/ssys/aiworker/(系统空间), Solution 以相对延迟导入
+   规避潜在循环依赖; 在类型注册表默认注册, 融入既有仿真框架。
+5. 甄别既有问题: 复用上一次重构结论, 确认 simulation_core_module 包级导入报错属
+   既有 sys.path 依赖, 以隔离加载 + 官方测试套件退出码 0 作为通过判据。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/ssys/aiworker/solution_understanding_worker.py (新增)
+- bo/ssys/aiworker/__init__.py (导出新类)
+- simulation_core_module/worker_type_registry.py (注册新类型)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-02
+修改内容: 新建方案拆分智能员工类 SolutionDecompositionWorker（继承 AIWorker）
+================================================================================
+修改原因
+================================================================================
+用户要求创建“方案拆分智能员工”类, 负责对结构化方案进行拆分, 生成任务、任务图谱、
+任务清单、任务流组; 要求继承智能员工基础类 AIWorker 的全部方法, 对象代码放入
+bo/ssys/aiworker/ 目录, 数据管理归入系统空间(ssys)。
+
+================================================================================
+具体修改
+================================================================================
+1. 新增 bo/ssys/aiworker/solution_decomposition_worker.py
+   - 定义 SolutionDecompositionWorker(AIWorker) 子类, 继承基础类全部能力
+     (任务清单/排期/持续工作/任务传递等), 扩展“方案拆分”能力。
+   - 新增字段 worker_type="SolutionDecompositionWorker"、default_role(默认执行角色)、
+     default_task_hours(单任务默认工时); 私有属性 _decomposition_results 缓存拆分结果。
+   - 核心方法:
+     * decompose(solution): 对结构化方案(Solution)进行拆分, 返回
+       {tasks, tasks_graph, flow_groups, task_manifest}。
+     * decompose_to_manifest(solution): 便捷方法, 仅返回任务清单。
+     * get_decomposition_results(): 返回全部拆分结果。
+   - 拆分策略(自动、确定性):
+     * _extract_work_items: 优先按方案举措 initiatives 拆分; 为空时回退 objectives /
+       work_content / purpose, 保证至少 1 项。
+     * 生成 START(StartTask) + 逐项普通任务(Task) + END(EndTask), 建立线性有向链路
+       START→T1→...→Tn→END; 执行角色在方案 roles 中轮转分配, 无角色时用 default_role。
+     * 组装 TasksGraph -> split_into_flow_groups() 拆出 TaskFlowGroup ->
+       汇总为 TaskManifest(回填 _solution_id)。
+   - 通过 from ...solution import Solution / from ...task_manifest import TaskManifest
+     延迟导入并 update_forward_refs, 规避循环依赖。
+2. bo/ssys/aiworker/__init__.py: 导出 SolutionDecompositionWorker。
+3. simulation_core_module/worker_type_registry.py: 导入并默认注册
+   "SolutionDecompositionWorker" 类型。
+
+================================================================================
+验证结果
+================================================================================
+1. 继承验证: issubclass(SolutionDecompositionWorker, AIWorker)=True;
+   实例具备 add_task/schedule_tasks/working/stop_working 等基础方法。
+2. 拆分能力(__main__ 演示): 3 项举措 -> 生成 5 个任务(START+3普通+END)、
+   任务图谱路径 1 条且 is_connected=True、任务流组 1 个、任务清单总任务数 5。
+3. 端到端联动: 理解员(understand 文本)-> 拆分员(decompose) 全链路成功,
+   tasks=5、flows=1、manifest_tasks=5、flow_valid=True、graph_connected=True。
+4. 注册表: WorkerTypeRegistry.is_registered('SolutionDecompositionWorker')=True。
+5. 回归: 仿真核心模块测试套件 run_tests.py 退出码 0(未受影响)。
+
+================================================================================
+思维路径
+================================================================================
+1. 先读目标数据结构: 通读 Task/StartTask/EndTask、TasksGraph、TaskFlowGroup、
+   TaskManifest, 明确拆分产物的构造与校验规则(流组需 START首/END尾且中间≥1普通任务)。
+2. 复用既有拆分能力: 借助 TasksGraph.split_into_flow_groups() 由图谱路径生成流组,
+   避免重复实现路径提取与链路校验逻辑。
+3. 确定性自动拆分: 举措逐项成任务 + 线性链路 + 角色轮转, 产出稳定可测,
+   同时保留回退策略确保任意方案都能拆出合法任务清单。
+4. 继承而非重写: 子类仅新增拆分方法/字段, 完整保留基类任务处理能力。
+5. 归属与延迟导入: 代码置于 bo/ssys/aiworker/(系统空间), Solution/TaskManifest
+   相对延迟导入; 在类型注册表默认注册, 融入既有仿真框架。
+6. 与理解员协同: 验证 understand -> decompose 管线, 确保两个新员工可串联工作。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/ssys/aiworker/solution_decomposition_worker.py (新增)
+- bo/ssys/aiworker/__init__.py (导出新类)
+- simulation_core_module/worker_type_registry.py (注册新类型)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-02
+修改内容: 新建任务执行智能员工类 TaskExecutionWorker（继承 AIWorker）
+================================================================================
+修改原因
+================================================================================
+用户要求创建“任务执行智能员工”类, 负责对任务进行执行, 并记录执行日志供未来分析使用;
+要求继承智能员工基础类 AIWorker 的全部方法, 对象代码放入 bo/ssys/aiworker/ 目录,
+数据管理归入系统空间(ssys)。
+
+================================================================================
+具体修改
+================================================================================
+1. 新增 bo/ssys/aiworker/task_execution_worker.py
+   - 定义 ExecutionLogEntry(BaseModel): 单条执行日志, 记录 log_id/task_id/task_name/
+     employee/execute_role/status/start_time/end_time/duration_seconds/
+     resource_consumption/raw_value/remark/error_message/created_at。
+   - 定义 ExecutionStatus 常量: success/failed/skipped。
+   - 定义 TaskExecutionWorker(AIWorker) 子类, 继承基础类全部能力:
+     * 覆写 execute_task: 复用 super().execute_task 的完整执行流程(思考/执行/状态更新/
+       后续任务派发), 在其前后包裹计时与异常捕获, 每次执行生成一条 ExecutionLogEntry;
+       异常时记录 failed 状态并重新抛出, finally 中保证日志落库。
+     * _build_log_entry: 依据任务实际起止时间/耗时/状态构造日志。
+     * 分析接口: get_execution_logs / get_logs_by_status / get_log_by_task /
+       get_execution_summary(总数/成功/失败/成功率/总耗时/平均耗时) / export_logs(JSON) /
+       clear_logs。
+   - 通过 from ...task import Task 延迟导入并 update_forward_refs, 规避循环依赖。
+2. bo/ssys/aiworker/__init__.py: 导出 TaskExecutionWorker / ExecutionLogEntry / ExecutionStatus。
+3. simulation_core_module/worker_type_registry.py: 导入并默认注册 "TaskExecutionWorker" 类型。
+
+================================================================================
+验证结果
+================================================================================
+1. 继承验证: issubclass(TaskExecutionWorker, AIWorker)=True; 实例具备
+   add_task/schedule_tasks/working/stop_working/execute_task 等基础方法,
+   以及 get_execution_logs/get_execution_summary/export_logs 等日志方法。
+2. 执行日志(__main__ 演示): 执行 1 个任务 -> 生成日志 EXECLOG_EMP_TE_001_0001,
+   status=success、duration_seconds≈0.602; 执行摘要 total_executions=1、
+   success_count=1、success_rate=1.0。
+3. 注册表: WorkerTypeRegistry.is_registered('TaskExecutionWorker')=True。
+4. 回归: 仿真核心模块测试套件 run_tests.py 退出码 0(未受影响)。
+
+================================================================================
+思维路径
+================================================================================
+1. 复用基类执行流程: 任务执行的核心逻辑(think/execute/派发)已在 AIWorker.execute_task
+   中实现, 子类通过 super() 调用完整复用, 仅在外层叠加日志采集, 不重复造轮子。
+2. 日志面向未来分析: 用独立 ExecutionLogEntry 模型结构化留存执行过程/结果/耗时/异常,
+   并提供筛选与摘要统计接口, 便于后续复盘、性能分析与优化。
+3. 异常安全: try/except/finally 保证无论成功失败都记录日志, 失败重抛不吞异常,
+   兼顾可分析性与流程正确性。
+4. 继承而非重写: 仅覆写 execute_task 并新增日志相关方法/字段, 完整保留基类能力。
+5. 归属与延迟导入: 代码置于 bo/ssys/aiworker/(系统空间), Task 相对延迟导入;
+   在类型注册表默认注册, 融入既有仿真框架。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/ssys/aiworker/task_execution_worker.py (新增)
+- bo/ssys/aiworker/__init__.py (导出新类)
+- simulation_core_module/worker_type_registry.py (注册新类型)
+- 修改记录.log (本文件)
+
+================================================================================
+修改时间: 2026-07-02
+修改内容: 系统管理模块新增“智能员工管理”子模块 · “智能员工注册”功能模块(全栈)
+================================================================================
+修改原因
+================================================================================
+用户要求在系统管理模块中建立“智能员工管理”子模块, 并在其下建立“智能员工注册”
+功能模块; 支持通过前端页面对智能员工的类型、全路径类名、最大数量等信息进行增删改查,
+同时提供服务函数供各模块调用获取智能员工信息; 前端入口放在“系统管理”→“智能员工管理”
+→“智能员工注册”菜单。要求遵循现有整体框架, 不影响其它功能与页面。
+
+================================================================================
+具体修改(严格分层, 与既有对象归属一致)
+================================================================================
+1. 业务对象(系统空间域, bo/ssys):
+   - 新增 bo/ssys/ai_worker_registration.py: AIWorkerRegistration(Pydantic 模型),
+     字段含 worker_type(类型标识, 唯一)/worker_name(类型名称)/class_path(全路径类名)/
+     max_count(最大数量, 0=不限)/description/status(active|disabled)/时间戳。
+   - bo/ssys/__init__.py 导出 AIWorkerRegistration。
+2. 数据表(ssys_ 前缀, 归属结果/系统空间存储):
+   - data_storage_services/SQLite/sqlite_db_init.sql 新增建表
+     ssys_ai_worker_registry + 唯一索引(worker_type)/状态索引。
+   - 同步在现有两个 simulation.db(DB/SQLite 与 Simulation_Plantform/DB/SQLite)建表。
+3. 数据管理逻辑(sql_db_services/ssys):
+   - 新增 ai_worker_registry_service.py: AIWorkerRegistryService(增删改查 + 类型唯一校验),
+     并提供供各模块直接调用的服务函数:
+     get_worker_registration / list_worker_registrations / get_worker_class_path /
+     get_worker_max_count / resolve_worker_class(按全路径动态加载类)。
+   - ssys/__init__.py 导出服务类与全部服务函数。
+4. API 路由(复用系统管理路由 /api/system):
+   - user_interaction/web_action/routers/system.py 新增 /worker-registries 的
+     GET(列表)/GET{id}/POST/PUT{id}/DELETE{id} 接口, 复用 _ok/_err 统一响应。
+5. 前端(web_front, iframe 框架内 system 页):
+   - modules/system.html: 侧边栏由单一分组改为分组菜单(menuGroups):
+     “系统对象”(组织/人员/角色/权限) 与 “智能员工管理”(智能员工/智能员工注册);
+     新增 reg 页签的过滤条、列表表格、增改表单。
+   - js/system.js: 新增 reg 页签(tabs)、menuGroups 分组、regFilter、表单字段、
+     列表加载分支、openEditReg/confirmDeleteReg、submitModal 与 deleteEntity 分支,
+     并在 return 中暴露; 资源版本号升级触发缓存刷新。
+
+================================================================================
+验证结果
+================================================================================
+1. 服务层(直接调用): add/list/update/delete 正常; 类型重复 add 抛错(dup=OK);
+   服务函数 get_worker_registration/get_worker_class_path/get_worker_max_count/
+   list_worker_registrations 均返回正确; resolve_worker_class 动态加载得到
+   SolutionUnderstandingWorker 类对象。
+2. HTTP 接口(uvicorn 运行态, /api/system/worker-registries):
+   add_success=True、list_total=1、update(改名+max_count=9)成功、del_success=True。
+3. 前端资源: /modules/system.html = 200; system.js 含 worker-registries / menuGroups /
+   openEditReg; system.html 含 reg 页签模板; 分组标题“智能员工管理”由 menuGroups 渲染。
+4. 建表: 两个 simulation.db 均存在 ssys_ai_worker_registry 表。
+
+================================================================================
+思维路径
+================================================================================
+1. 先探清既有框架: 通读 system.py(路由/统一响应)、ssys 服务(role_service 模式)、
+   bo/ssys/role(BO 模式)、system.html/js(前端 iframe + Vue 页签)、DDL 与 db 位置,
+   保证新功能与现有分层/命名/响应风格一致。
+2. 归属正确: ssys_ 表归系统/结果空间存储, 对应 BO 放 bo/ssys, 数据管理放
+   sql_db_services/ssys, 复用系统管理路由与前端 system 页, 不新开模块以免干扰。
+3. 服务函数解耦: 除 CRUD 外单列模块级服务函数并封装连接生命周期, 供仿真等模块
+   直接按类型获取注册信息/全路径类名/最大数量, 甚至动态加载类, 契合“各模块调用”诉求。
+4. 前端最小侵入: 以分组菜单(menuGroups)实现“系统管理→智能员工管理→智能员工注册”
+   层级, 复用既有弹窗/表格/分页组件, 仅增量新增 reg 分支, 不改动其它页签逻辑。
+5. 全链路验证: 服务层脚本 + HTTP 运行态 + 前端资源三层验证, 并对两个 db 建表,
+   确保开箱可用且不影响既有功能。
+
+================================================================================
+受影响文件
+================================================================================
+- bo/ssys/ai_worker_registration.py (新增)
+- bo/ssys/__init__.py (导出)
+- data_storage_services/SQLite/sqlite_db_init.sql (新增建表)
+- data_storage_services/sql_db_services/ssys/ai_worker_registry_service.py (新增)
+- data_storage_services/sql_db_services/ssys/__init__.py (导出)
+- user_interaction/web_action/routers/system.py (新增 CRUD 路由)
+- user_interaction/web_front/modules/system.html (分组菜单 + reg 页签)
+- user_interaction/web_front/js/system.js (reg 逻辑)
+- DB/SQLite/simulation.db、Simulation_Plantform/DB/SQLite/simulation.db (建表)
+- 修改记录.log (本文件)
+

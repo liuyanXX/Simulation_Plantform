@@ -3,7 +3,7 @@
 提供智能员工类型的注册和管理功能，确保只有已注册的类型可以被实例化。
 """
 from typing import Dict, Type, Any
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker, SolutionUnderstandingWorker, SolutionDecompositionWorker, TaskExecutionWorker
 
 
 class WorkerTypeRegistry:
@@ -105,3 +105,9 @@ class WorkerTypeRegistry:
 
 # 默认注册AIWorker类型
 WorkerTypeRegistry.register("AIWorker", AIWorker)
+# 默认注册方案理解智能员工类型
+WorkerTypeRegistry.register("SolutionUnderstandingWorker", SolutionUnderstandingWorker)
+# 默认注册方案拆分智能员工类型
+WorkerTypeRegistry.register("SolutionDecompositionWorker", SolutionDecompositionWorker)
+# 默认注册任务执行智能员工类型
+WorkerTypeRegistry.register("TaskExecutionWorker", TaskExecutionWorker)

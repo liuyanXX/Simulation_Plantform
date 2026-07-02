@@ -16,7 +16,7 @@ from enum import Enum
 import os
 
 from organization import Organization
-from ai_worker import AIWorker
+from ssys.aiworker import AIWorker
 from task import Task
 
 

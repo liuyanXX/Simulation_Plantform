@@ -10,7 +10,7 @@
 - Organization: 组织类
 """
 
-from .ai_worker import AIWorker
+from .ssys.aiworker import AIWorker
 from .task import Task, StartTask, EndTask, HaltTask
 from .task_flow_group import TaskFlowGroup
 from .tasks_graph import TasksGraph

@@ -12,7 +12,7 @@ from .base_service import SQLDatabaseService
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 
 
 class WorkerService(SQLDatabaseService[AIWorker]):

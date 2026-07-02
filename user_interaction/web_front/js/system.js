@@ -22,7 +22,13 @@ createApp({
             { key: 'role',   icon: '🛡️', label: '角色', count: -1, desc: '角色定义维护' },
             { key: 'perm',   icon: '🔑', label: '权限', count: -1, desc: '员工-角色 指派/回收' },
             { key: 'worker', icon: '🤖', label: '智能员工', count: -1, desc: '智能员工注册与设定' },
+            { key: 'reg',    icon: '📇', label: '智能员工注册', count: -1, desc: '智能员工类型 / 全路径类名 / 最大数量 注册管理' },
         ]);
+        // 侧边栏分组菜单：系统管理 → 智能员工管理 → 智能员工注册
+        const menuGroups = computed(() => ([
+            { title: '系统对象', items: tabs.value.filter(t => ['org', 'emp', 'role', 'perm'].indexOf(t.key) !== -1) },
+            { title: '智能员工管理', items: tabs.value.filter(t => ['worker', 'reg'].indexOf(t.key) !== -1) },
+        ]));
         const currentTab = ref('org');
         const keyword = ref('');
         const isLoading = ref(false);
@@ -48,6 +54,7 @@ createApp({
         const empFilter = reactive({ status: '', org_id: '' });
         const roleFilter = reactive({ status: '' });
         const workerFilter = reactive({ department: '' });
+        const regFilter = reactive({ status: '' });
 
         const showModal = ref(false);
         const modalTitle = ref('');
@@ -61,7 +68,8 @@ createApp({
             email: '', phone: '',
             role_code: '', role_name: '',
             employee_id: '', name: '', department: '',
-            daily_work_hours: 8, roles_raw: ''
+            daily_work_hours: 8, roles_raw: '',
+            worker_type: '', worker_name: '', class_path: '', max_count: 0
         });
 
         const showRoleModal = ref(false);
@@ -82,17 +90,18 @@ createApp({
                 emp: '按姓名 / 工号 / 职位搜索',
                 role: '按角色名称 / 编码搜索',
                 perm: '按员工姓名 / 工号搜索',
-                worker: '按智能员工姓名 / 员工ID搜索'
+                worker: '按智能员工姓名 / 员工ID搜索',
+                reg: '按类型 / 名称 / 类名搜索'
             };
             return m[currentTab.value] || '输入关键词搜索';
         });
         const currentTabAddLabel = computed(() => {
-            const m = { org: '新增组织', emp: '新增人员', role: '新增角色', worker: '新增智能员工' };
+            const m = { org: '新增组织', emp: '新增人员', role: '新增角色', worker: '新增智能员工', reg: '新增注册' };
             return m[currentTab.value] || '';
         });
         const emptyHint = computed(() => {
             if (keyword.value) return '未找到匹配结果，可清除关键词重试';
-            const m = { org: '暂无组织，请点击“新增组织”添加。', emp: '暂无人员，请点击“新增人员”添加。', role: '暂无角色，请点击“新增角色”添加。', perm: '暂无员工数据。', worker: '暂无智能员工，请点击“新增智能员工”添加。' };
+            const m = { org: '暂无组织，请点击“新增组织”添加。', emp: '暂无人员，请点击“新增人员”添加。', role: '暂无角色，请点击“新增角色”添加。', perm: '暂无员工数据。', worker: '暂无智能员工，请点击“新增智能员工”添加。', reg: '暂无智能员工注册，请点击“新增注册”添加。' };
             return m[currentTab.value] || '暂无数据';
         });
 
@@ -215,6 +224,20 @@ createApp({
                     } else {
                         list.value = []; total.value = 0;
                     }
+                } else if (tab === 'reg') {
+                    const qs = new URLSearchParams();
+                    qs.set('page', p);
+                    qs.set('page_size', ps);
+                    if (regFilter.status) qs.set('status', regFilter.status);
+                    if (keyword.value) qs.set('keyword', keyword.value);
+                    url = `${API_BASE}/worker-registries?${qs.toString()}`;
+                    const data = await apiFetch(url);
+                    if (data && data.success && data.data) {
+                        list.value = data.data.list || [];
+                        total.value = data.data.total || 0;
+                    } else {
+                        list.value = []; total.value = 0;
+                    }
                 }
                 if (currentPage.value > totalPages.value) {
                     currentPage.value = totalPages.value;
@@ -297,7 +320,8 @@ createApp({
                 email: '', phone: '',
                 role_code: '', role_name: '',
                 employee_id: '', name: '', department: '',
-                daily_work_hours: 8, roles_raw: ''
+                daily_work_hours: 8, roles_raw: '',
+                worker_type: '', worker_name: '', class_path: '', max_count: 0
             });
         }
 
@@ -312,6 +336,8 @@ createApp({
                 modalTitle.value = '新增人员';
             } else if (tab === 'role') {
                 modalTitle.value = '新增角色';
+            } else if (tab === 'reg') {
+                modalTitle.value = '新增智能员工注册';
             }
             isEditing.value = false;
             resetForm();
@@ -378,6 +404,22 @@ createApp({
             showModal.value = true;
         }
 
+        function openEditReg(r) {
+            modalTitle.value = '编辑智能员工注册';
+            isEditing.value = true;
+            resetForm();
+            Object.assign(form, {
+                _edit_id: r.id,
+                worker_type: r.worker_type || '',
+                worker_name: r.worker_name || '',
+                class_path: r.class_path || '',
+                max_count: r.max_count || 0,
+                status: r.status || 'active',
+                description: r.description || ''
+            });
+            showModal.value = true;
+        }
+
         function confirmDeleteOrg(o) {
             if (!confirm(`确定删除组织「${o.org_name}」及其子组织与下属人员？`)) return;
             deleteEntity('org', o.id);
@@ -395,6 +437,11 @@ createApp({
             deleteEntity('worker', w.employee_id);
         }
 
+        function confirmDeleteReg(r) {
+            if (!confirm(`确定删除智能员工注册「${r.worker_name} (${r.worker_type})」？`)) return;
+            deleteEntity('reg', r.id);
+        }
+
         async function deleteEntity(tab, id) {
             try {
                 let url, method = 'DELETE';
@@ -402,6 +449,7 @@ createApp({
                 else if (tab === 'emp')  url = `${API_BASE}/employees/${id}`;
                 else if (tab === 'role') url = `${API_BASE}/roles/${id}`;
                 else if (tab === 'worker') url = `${API_BASE}/workers/${encodeURIComponent(id)}`;
+                else if (tab === 'reg') url = `${API_BASE}/worker-registries/${id}`;
                 const res = await apiFetch(url, { method });
                 if (res && res.success) {
                     showToast('删除成功', '对象已删除', 'success');
@@ -510,6 +558,32 @@ createApp({
                         showModal.value = false;
                         await reloadList();
                     }
+                } else if (tab === 'reg') {
+                    const payload = {
+                        worker_type: String(form.worker_type || '').trim(),
+                        worker_name: String(form.worker_name || '').trim(),
+                        class_path: String(form.class_path || '').trim(),
+                        max_count: Number(form.max_count) || 0,
+                        status: form.status || 'active',
+                        description: form.description || ''
+                    };
+                    let url, method, body;
+                    if (isEditing.value) {
+                        url = `${API_BASE}/worker-registries/${form._edit_id}`;
+                        method = 'PUT';
+                    } else {
+                        url = `${API_BASE}/worker-registries`;
+                        method = 'POST';
+                    }
+                    body = JSON.stringify(payload);
+                    const res = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body });
+                    if (res && res.success) {
+                        showToast('保存成功', '智能员工注册已保存', 'success');
+                        showModal.value = false;
+                        await reloadList();
+                    } else if (res && res.success === false) {
+                        showToast('保存失败', res.message || '', 'error');
+                    }
                 }
             } catch (e) {
                 showToast('保存失败', String(e && e.message || e), 'error');
@@ -577,10 +651,11 @@ createApp({
             toasts, removeToast,
             // state
             tabs, currentTab,
+            menuGroups,
             keyword, isLoading,
             list, total, currentPage, pageSize,
             loadStatus, loadStatusClass,
-            orgFilter, empFilter, roleFilter, workerFilter,
+            orgFilter, empFilter, roleFilter, workerFilter, regFilter,
             orgParents, allRoles, employeeRoles,
             showModal, modalTitle, isSubmitting, isEditing, form,
             showRoleModal, roleModalEmployee, selectedRoleIds,
@@ -595,6 +670,7 @@ createApp({
             selectTab, reloadList, doSearch, clearSearch,
             openAddModal, openEditOrg, openEditEmp, openEditRole, openEditWorker,
             confirmDeleteOrg, confirmDeleteEmp, confirmDeleteRole, confirmDeleteWorker,
+            openEditReg, confirmDeleteReg,
             submitModal,
             openRoleModal, toggleEmployeeRole
         };

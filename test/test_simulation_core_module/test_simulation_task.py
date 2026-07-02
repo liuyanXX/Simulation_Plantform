@@ -17,7 +17,7 @@ from simulation_core_module.simulation_task import (
     ConfigFormat,
     create_sample_config
 )
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 from bo.task import Task, StartTask, EndTask
 
 logging.basicConfig(

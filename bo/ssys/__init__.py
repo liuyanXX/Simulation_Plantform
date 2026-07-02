@@ -2,5 +2,11 @@
 from .organization import Organization, OrganizationTreeNode
 from .employee import Employee, EmployeeTreeNode
 from .role import Role
+from .ai_worker_registration import AIWorkerRegistration
 
-__all__ = ["Organization", "OrganizationTreeNode", "Employee", "EmployeeTreeNode", "Role"]
+__all__ = [
+    "Organization", "OrganizationTreeNode",
+    "Employee", "EmployeeTreeNode",
+    "Role",
+    "AIWorkerRegistration",
+]

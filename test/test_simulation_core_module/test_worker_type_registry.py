@@ -6,7 +6,7 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from simulation_core_module.worker_type_registry import WorkerTypeRegistry
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 
 logging.basicConfig(
     level=logging.INFO,

@@ -336,6 +336,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ssys_role_code ON ssys_role(role_code);
 CREATE INDEX IF NOT EXISTS idx_ssys_role_name ON ssys_role(role_name);
 CREATE INDEX IF NOT EXISTS idx_ssys_role_status ON ssys_role(status);
 
+-- 系统空间 · 智能员工注册表 (智能员工类型 / 全路径类名 / 最大数量)
+CREATE TABLE IF NOT EXISTS ssys_ai_worker_registry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    worker_type TEXT NOT NULL,
+    worker_name TEXT NOT NULL,
+    class_path TEXT NOT NULL,
+    max_count INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    extra_info TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ssys_ai_worker_registry_type ON ssys_ai_worker_registry(worker_type);
+CREATE INDEX IF NOT EXISTS idx_ssys_ai_worker_registry_status ON ssys_ai_worker_registry(status);
+
 CREATE TABLE IF NOT EXISTS smeta_role (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     solution_id TEXT NOT NULL,

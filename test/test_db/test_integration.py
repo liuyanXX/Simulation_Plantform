@@ -22,7 +22,7 @@ from bo.task import Task, StartTask, EndTask, Priority, TaskType
 from bo.task_manifest import TaskManifest
 from bo.task_flow_group import TaskFlowGroup
 from bo.tasks_graph import TasksGraph
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 from bo.organization import Organization
 
 

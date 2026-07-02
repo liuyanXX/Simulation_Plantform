@@ -23,8 +23,8 @@ def setup_logging():
     
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    # 使用绝对路径，基于脚本所在目录
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # 使用绝对路径，基于项目根目录 (bo/ssys/aiworker/ -> 上溯 4 层至 Simulation_Plantform)
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     log_dir = os.path.join(base_dir, 'logs')
     os.makedirs(log_dir, exist_ok=True)
     
@@ -267,7 +267,7 @@ class AIWorker(BaseModel):
         :param role_registry: 角色注册表，用于查找目标角色对应的员工
         """
         # 如果当前任务是终点任务，不再传递后续任务
-        from .task import TaskType
+        from ...task import TaskType
         if hasattr(task, 'task_type') and task.task_type == TaskType.END:
             logger.info(f"任务 {task.task_id} 是终点任务，流程结束")
             return
@@ -423,8 +423,8 @@ class AIWorker(BaseModel):
 
 
 # 延迟导入避免循环依赖，然后更新类型提示引用
-from .task import Task, Priority
-from .task_flow_group import TaskFlowGroup
+from ...task import Task, Priority
+from ...task_flow_group import TaskFlowGroup
 AIWorker.update_forward_refs()
 
 

@@ -11,7 +11,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from data_storage_services.sql_db_services.worker_service import WorkerService
-from bo.ai_worker import AIWorker
+from bo.ssys.aiworker import AIWorker
 
 
 class TestWorkerService(unittest.TestCase):

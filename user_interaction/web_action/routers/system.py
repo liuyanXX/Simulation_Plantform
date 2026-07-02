@@ -453,7 +453,7 @@ def list_workers(
 @router.post("/workers")
 def create_worker(payload: dict = Body(...)):
     try:
-        from bo.ai_worker import AIWorker
+        from bo.ssys.aiworker import AIWorker
         from data_storage_services.sql_db_services.worker_service import WorkerService
 
         emp_id = (payload.get("employee_id") or "").strip()
@@ -485,7 +485,7 @@ def create_worker(payload: dict = Body(...)):
 @router.put("/workers/{emp_id}")
 def update_worker(emp_id: str, payload: dict = Body(...)):
     try:
-        from bo.ai_worker import AIWorker
+        from bo.ssys.aiworker import AIWorker
         from data_storage_services.sql_db_services.worker_service import WorkerService
 
         svc = WorkerService()
@@ -523,3 +523,107 @@ def delete_worker(emp_id: str):
         return _ok({"employee_id": emp_id})
     except Exception as e:
         return _err(f"删除智能员工失败: {e}")
+
+
+# ============ 智能员工注册（智能员工管理 · 智能员工注册） ============
+
+@router.get("/worker-registries")
+def list_worker_registries(
+    page: int = 1,
+    page_size: int = 100,
+    status: Optional[str] = None,
+    keyword: str = "",
+):
+    try:
+        from data_storage_services.sql_db_services.ssys.ai_worker_registry_service import (
+            AIWorkerRegistryService,
+        )
+
+        svc = AIWorkerRegistryService()
+        items = svc.list_all(
+            status=status or None,
+            keyword=keyword or None,
+            page=page,
+            page_size=page_size,
+        )
+        total = svc.count(status=status or None, keyword=keyword or None)
+        svc.disconnect()
+        return _ok({
+            "list": [it.model_dump() for it in items],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        })
+    except Exception as e:
+        return _err(f"查询智能员工注册失败: {e}")
+
+
+@router.get("/worker-registries/{rid}")
+def get_worker_registry(rid: int):
+    try:
+        from data_storage_services.sql_db_services.ssys.ai_worker_registry_service import (
+            AIWorkerRegistryService,
+        )
+
+        svc = AIWorkerRegistryService()
+        reg = svc.get_by_id(rid)
+        svc.disconnect()
+        if reg is None:
+            return _err("智能员工注册不存在", 404)
+        return _ok(reg.model_dump())
+    except Exception as e:
+        return _err(f"查询智能员工注册失败: {e}")
+
+
+@router.post("/worker-registries")
+def add_worker_registry(payload: dict = Body(...)):
+    try:
+        from bo.ssys.ai_worker_registration import AIWorkerRegistration
+        from data_storage_services.sql_db_services.ssys.ai_worker_registry_service import (
+            AIWorkerRegistryService,
+        )
+
+        reg = AIWorkerRegistration(**payload)
+        svc = AIWorkerRegistryService()
+        saved = svc.add(reg)
+        svc.disconnect()
+        return _ok(saved.model_dump())
+    except Exception as e:
+        return _err(f"新增智能员工注册失败: {e}")
+
+
+@router.put("/worker-registries/{rid}")
+def update_worker_registry(rid: int, payload: dict = Body(...)):
+    try:
+        from bo.ssys.ai_worker_registration import AIWorkerRegistration
+        from data_storage_services.sql_db_services.ssys.ai_worker_registry_service import (
+            AIWorkerRegistryService,
+        )
+
+        payload["id"] = rid
+        reg = AIWorkerRegistration(**payload)
+        svc = AIWorkerRegistryService()
+        saved = svc.update(reg)
+        svc.disconnect()
+        if saved is None:
+            return _err("智能员工注册不存在", 404)
+        return _ok(saved.model_dump())
+    except Exception as e:
+        return _err(f"更新智能员工注册失败: {e}")
+
+
+@router.delete("/worker-registries/{rid}")
+def delete_worker_registry(rid: int):
+    try:
+        from data_storage_services.sql_db_services.ssys.ai_worker_registry_service import (
+            AIWorkerRegistryService,
+        )
+
+        svc = AIWorkerRegistryService()
+        ok = svc.delete(rid)
+        svc.disconnect()
+        if not ok:
+            return _err("智能员工注册不存在或删除失败", 404)
+        return _ok({"id": rid})
+    except Exception as e:
+        return _err(f"删除智能员工注册失败: {e}")
